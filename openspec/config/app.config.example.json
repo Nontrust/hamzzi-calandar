@@ -1,0 +1,89 @@
+{
+  "app": {
+    "name": "공기업 합격 스터디/보상 앱",
+    "timezone": "Asia/Seoul",
+    "minSessionMinutesForStats": 20,
+    "dailyUnlockLimit": 1,
+    "rewardUnlockThresholdDailyRate": 70,
+    "rewardUnlockThresholdWeeklyRate": 75
+  },
+  "integrations": {
+    "googleCalendar": {
+      "enabled": true,
+      "oauthClientId": "REPLACE_ME",
+      "oauthClientSecret": "REPLACE_ME",
+      "redirectUri": "com.example.app:/oauth2redirect",
+      "calendarId": "primary",
+      "reminders": [
+        {
+          "type": "popup",
+          "minutes": 10080
+        },
+        {
+          "type": "popup",
+          "minutes": 4320
+        },
+        {
+          "type": "popup",
+          "minutes": 1440
+        },
+        {
+          "type": "popup",
+          "minutes": 180
+        }
+      ]
+    },
+    "recruitmentApis": {
+      "dataGoKr": {
+        "enabled": true,
+        "serviceKey": "REPLACE_ME",
+        "baseUrl": "https://api.data.go.kr",
+        "pollCron": "0 0,12,18 * * *",
+        "keywords": [
+          "한국전력",
+          "발전",
+          "공기업",
+          "사무",
+          "전기",
+          "NCS"
+        ]
+      },
+      "alio": {
+        "enabled": false,
+        "apiKey": "REPLACE_ME",
+        "baseUrl": "https://opendata.alio.go.kr",
+        "pollCron": "0 9 * * *",
+        "keywords": [
+          "공공기관",
+          "채용"
+        ]
+      },
+      "worknet": {
+        "enabled": false,
+        "apiKey": "REPLACE_ME",
+        "baseUrl": "https://www.work.go.kr",
+        "pollCron": "0 8 * * *",
+        "keywords": [
+          "공채",
+          "채용"
+        ]
+      }
+    },
+    "youtube": {
+      "mode": "link_only",
+      "defaultPlaylists": [
+        {
+          "title": "공부할 때 듣는 플레이리스트",
+          "url": "https://music.youtube.com/playlist?list=REPLACE_ME"
+        }
+      ],
+      "useYouTubeDataApiForMetadata": false,
+      "youTubeDataApiKey": "REPLACE_ME"
+    }
+  },
+  "privacy": {
+    "enableBiometricLockForRewards": true,
+    "allowExportAllData": true,
+    "allowHardDeleteAllData": true
+  }
+}
