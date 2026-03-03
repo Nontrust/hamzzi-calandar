@@ -1,0 +1,17 @@
+{
+  "name": "nahamzzi",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:mobile",
+    "dev:mobile": "npm --workspace apps/mobile-web run dev",
+    "dev:web": "npm --workspace apps/mobile-web run web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

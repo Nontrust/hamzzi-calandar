@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@nahamzzi/config": ["packages/config/src"],
+      "@nahamzzi/domain": ["packages/domain/src"],
+      "@nahamzzi/ui": ["packages/ui/src"]
+    }
+  }
+}
