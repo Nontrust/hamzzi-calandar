@@ -7,6 +7,7 @@ import { runInterviewSessionCompletion } from "../src/interviewJob";
 import {
   HAMJJI_BRAND_LEXICON,
   buildAnniversaryItem,
+  calculateAnniversaryDate,
   containsBlockedWord,
   formatAnniversaryHint,
   formatAnniversaryTitle,
@@ -85,5 +86,23 @@ describe("integration domain behavior", () => {
     );
     expect(item.title).toContain("D+100");
     expect(item.hint).toContain("기준일");
+  });
+
+  it("calculates anniversary dates for day/year/month and boundary cases", () => {
+    expect(
+      calculateAnniversaryDate({ name: "100일", baseDate: "2025-11-25", dayOffset: 100 }, "2026-03-01")
+    ).toBe("2026-03-04");
+
+    expect(
+      calculateAnniversaryDate({ name: "1주년", baseDate: "2025-11-25", yearInterval: 1 }, "2026-01-01")
+    ).toBe("2026-11-25");
+
+    expect(
+      calculateAnniversaryDate({ name: "월말", baseDate: "2026-01-31", monthInterval: 1 }, "2026-02-01")
+    ).toBe("2026-02-28");
+
+    expect(
+      calculateAnniversaryDate({ name: "윤년", baseDate: "2024-02-29", yearInterval: 1 }, "2025-01-01")
+    ).toBe("2025-02-28");
   });
 });
