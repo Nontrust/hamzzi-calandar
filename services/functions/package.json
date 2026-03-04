@@ -1,0 +1,20 @@
+{
+  "name": "functions",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --pool=vmThreads"
+  },
+  "dependencies": {
+    "@nahamzzi/config": "0.1.0",
+    "@nahamzzi/domain": "0.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
+
