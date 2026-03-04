@@ -5,8 +5,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useEffect, useState } from "react";
 import { Button, SafeAreaView, Text, View } from "react-native";
 import {
-  buildAnniversaryItem,
   buildCalendarMonthItems,
+  buildRelationshipDDayItem,
   canManageRewards,
   getBrandLabel,
   getRoleHelper,
@@ -56,10 +56,7 @@ export default function HomeScreen() {
   }
 
   const today = "2026-03-04";
-  const anniversaryItem = buildAnniversaryItem(
-    { name: "햄찌데이", baseDate: "2025-11-25", dayOffset: 100 },
-    today
-  );
+  const anniversaryItem = buildRelationshipDDayItem("사귄날", "2024-03-23", today);
   const monthItems = buildCalendarMonthItems(
     "2026-03",
     [{ kind: "exam", date: "2026-03-12", title: "데이트데이 · [공기업] 필기시험" }],

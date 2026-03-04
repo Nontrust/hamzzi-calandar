@@ -1,8 +1,8 @@
 import { applyCalendarSyncResult, markRetry, planCalendarUpsert } from "./calendarSync";
 import type { CalendarSyncEvent } from "./calendarSync";
 import {
-  buildAnniversaryItem,
   buildCalendarMonthItems,
+  buildRelationshipDDayItem,
   buildDualSyncFailureMessage,
   formatCalendarTitle,
   type CalendarMonthItem
@@ -14,10 +14,7 @@ export function runCalendarSyncJob(event: CalendarSyncEvent, remoteSuccess: bool
     ? applyCalendarSyncResult(plan.nextStatus, "success")
     : applyCalendarSyncResult(plan.nextStatus, "failed");
   const today = "2026-03-04";
-  const anniversary = buildAnniversaryItem(
-    { name: "햄찌데이", baseDate: "2025-11-25", dayOffset: 100 },
-    today
-  );
+  const anniversary = buildRelationshipDDayItem("사귄날", "2024-03-23", today);
   const monthItems = buildCalendarMonthItems(
     "2026-03",
     [{ kind: "exam", date: "2026-03-12", title: "데이트데이 · [공기업] 필기시험" } satisfies CalendarMonthItem],

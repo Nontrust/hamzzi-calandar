@@ -78,6 +78,15 @@ export function formatAnniversaryHint(today: string, targetDate: string): string
   return `${Math.abs(delta)}일 지났어요.`;
 }
 
+export function calculateRelationshipDayCount(baseDate: string, today: string): number {
+  return diffDays(toUtcDate(baseDate), toUtcDate(today)) + 1;
+}
+
+export function formatRelationshipDDay(baseDate: string, today: string): string {
+  const dayCount = calculateRelationshipDayCount(baseDate, today);
+  return `D+${Math.max(1, dayCount)}`;
+}
+
 export function calculateAnniversaryDate(rule: AnniversaryRule, today: string): string {
   const base = toUtcDate(rule.baseDate);
 
@@ -114,6 +123,17 @@ export function buildAnniversaryItem(rule: AnniversaryRule, today: string): Anni
     title: formatAnniversaryTitle(rule.name, dayCount),
     dDayLabel: formatAnniversaryHint(today, date),
     hint: `기준일 ${rule.baseDate} 기준`,
+    badge: "anniversary-dot"
+  };
+}
+
+export function buildRelationshipDDayItem(name: string, baseDate: string, today: string): AnniversaryItem {
+  return {
+    kind: "anniversary",
+    date: today,
+    title: `${name} · ${formatRelationshipDDay(baseDate, today)}`,
+    dDayLabel: `${calculateRelationshipDayCount(baseDate, today)}일째`,
+    hint: `시작일 ${baseDate} 기준`,
     badge: "anniversary-dot"
   };
 }

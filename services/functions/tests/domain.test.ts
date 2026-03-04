@@ -7,10 +7,13 @@ import { runInterviewSessionCompletion } from "../src/interviewJob";
 import {
   HAMJJI_BRAND_LEXICON,
   buildAnniversaryItem,
+  buildRelationshipDDayItem,
   calculateAnniversaryDate,
+  calculateRelationshipDayCount,
   containsBlockedWord,
   formatAnniversaryHint,
   formatAnniversaryTitle,
+  formatRelationshipDDay,
   getBrandLabel,
   getRoleLabel,
   validateLexicon
@@ -81,21 +84,31 @@ describe("integration domain behavior", () => {
     expect(formatAnniversaryHint("2026-03-04", "2026-03-01")).toContain("3일 지났");
 
     const item = buildAnniversaryItem(
-      { name: "햄찌데이", baseDate: "2025-11-25", dayOffset: 100 },
+      { name: "햄찌데이", baseDate: "2024-03-23", dayOffset: 100 },
       "2026-03-04"
     );
     expect(item.title).toContain("D+100");
     expect(item.hint).toContain("기준일");
   });
 
+  it("calculates relationship D-day from the couple start date", () => {
+    expect(calculateRelationshipDayCount("2024-03-23", "2024-03-23")).toBe(1);
+    expect(calculateRelationshipDayCount("2024-03-23", "2024-03-24")).toBe(2);
+    expect(formatRelationshipDDay("2024-03-23", "2026-03-04")).toContain("D+");
+
+    const dday = buildRelationshipDDayItem("사귄날", "2024-03-23", "2026-03-04");
+    expect(dday.title).toContain("사귄날 · D+");
+    expect(dday.dDayLabel).toContain("일째");
+  });
+
   it("calculates anniversary dates for day/year/month and boundary cases", () => {
     expect(
-      calculateAnniversaryDate({ name: "100일", baseDate: "2025-11-25", dayOffset: 100 }, "2026-03-01")
-    ).toBe("2026-03-04");
+      calculateAnniversaryDate({ name: "100일", baseDate: "2024-03-23", dayOffset: 100 }, "2026-03-01")
+    ).toBe("2024-06-30");
 
     expect(
-      calculateAnniversaryDate({ name: "1주년", baseDate: "2025-11-25", yearInterval: 1 }, "2026-01-01")
-    ).toBe("2026-11-25");
+      calculateAnniversaryDate({ name: "1주년", baseDate: "2024-03-23", yearInterval: 1 }, "2026-01-01")
+    ).toBe("2026-03-23");
 
     expect(
       calculateAnniversaryDate({ name: "월말", baseDate: "2026-01-31", monthInterval: 1 }, "2026-02-01")
