@@ -4,6 +4,17 @@ import { applyCalendarSyncResult, markRetry } from "../src/calendarSync";
 import { validateInterviewReport } from "../src/interviewReport";
 import { runCalendarSyncJob } from "../src/calendarSyncJob";
 import { runInterviewSessionCompletion } from "../src/interviewJob";
+import { clearAuditEvents, listAuditEvents } from "../src/auditLog";
+import { handleCalendarSync, handleExamIngestionSync, handleInterviewCompletion } from "../src/handlers";
+import { finalizeRetrySuccess, nextBackoffDelayMs, planRetryAfterFailure } from "../src/retryOrchestration";
+import {
+  clearTokenStore,
+  decryptToken,
+  getExternalToken,
+  refreshExternalToken,
+  saveExternalToken,
+  shouldRefreshToken
+} from "../src/tokenLifecycle";
 import {
   HAMJJI_BRAND_LEXICON,
   buildAnniversaryItem,
@@ -67,6 +78,8 @@ describe("integration domain behavior", () => {
     expect(result.titleTemplate).toContain("데이트데이");
     expect(result.failureMessage).toContain("다시 시도");
     expect(result.monthViewItems.some((item) => item.kind === "anniversary")).toBe(true);
+    expect(result.failureCode).toBe("SYNC_RETRY_SCHEDULED");
+    expect(result.orchestrationState).toBe("retrying");
     expect(result.finalStatus).toBe("failed");
   });
 
@@ -117,5 +130,80 @@ describe("integration domain behavior", () => {
     expect(
       calculateAnniversaryDate({ name: "윤년", baseDate: "2024-02-29", yearInterval: 1 }, "2025-01-01")
     ).toBe("2025-02-28");
+  });
+
+  it("returns standard response envelope for success and auth failure", async () => {
+    const ok = await handleInterviewCompletion({ userId: "u1", role: "B" });
+    expect(ok.success).toBe(true);
+    expect(ok.requestId).toBeTruthy();
+
+    const denied = await handleExamIngestionSync({ userId: "u2", role: "B" });
+    expect(denied.success).toBe(false);
+    if (!denied.success) {
+      expect(denied.errorCode).toBe("FORBIDDEN_ROLE");
+      expect(denied.requestId).toBeTruthy();
+    }
+  });
+
+  it("records audit events with requestId for denied and success flows", async () => {
+    clearAuditEvents();
+    await handleCalendarSync({ userId: "u1", role: "A" });
+    await handleExamIngestionSync({ userId: "u2", role: "B" });
+    const events = listAuditEvents();
+    expect(events.length).toBeGreaterThanOrEqual(2);
+    expect(events.every((event) => event.requestId.length > 0)).toBe(true);
+    expect(events.some((event) => event.outcome === "denied")).toBe(true);
+  });
+
+  it("handles external token lifecycle with pre-refresh and reauth fallback", async () => {
+    clearTokenStore();
+    const now = new Date("2026-03-04T00:00:00.000Z");
+    const token = saveExternalToken(
+      "google_calendar",
+      "user-a",
+      "access-old",
+      "refresh-old",
+      "2026-03-04T00:20:00.000Z",
+      now
+    );
+    expect(shouldRefreshToken(token.expiresAt, now, 30)).toBe(true);
+
+    const refreshed = await refreshExternalToken(
+      token,
+      now,
+      async () => ({
+        accessToken: "access-new",
+        refreshToken: "refresh-new",
+        expiresAt: "2026-03-05T00:00:00.000Z"
+      })
+    );
+    expect(refreshed.errorCode).toBeNull();
+    expect(decryptToken(refreshed.record.encryptedAccessToken)).toBe("access-new");
+
+    const failed = await refreshExternalToken(
+      { ...refreshed.record, retryCount: 2 },
+      now,
+      async () => {
+        throw new Error("refresh failed");
+      }
+    );
+    expect(failed.errorCode).toBe("TOKEN_REAUTH_REQUIRED");
+    expect(getExternalToken("google_calendar", "user-a")?.state).toBe("reauth_required");
+  });
+
+  it("applies retry orchestration with backoff and max-retry guard", () => {
+    expect(nextBackoffDelayMs(1)).toBe(1000);
+    expect(nextBackoffDelayMs(2)).toBe(2000);
+
+    const retrying = planRetryAfterFailure(0, 3);
+    expect(retrying.state).toBe("retrying");
+    expect(retrying.nextDelayMs).toBe(1000);
+
+    const exhausted = planRetryAfterFailure(3, 3);
+    expect(exhausted.state).toBe("manual_review");
+    expect(exhausted.stopped).toBe(true);
+
+    const done = finalizeRetrySuccess();
+    expect(done.state).toBe("synced");
   });
 });

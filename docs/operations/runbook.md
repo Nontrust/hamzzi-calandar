@@ -27,6 +27,7 @@
 1. Apply SQL migrations in order:
    - `infra/migrations/0001_schema.sql`
    - `infra/migrations/0002_rls_and_storage.sql`
+   - `infra/migrations/0003_server_foundation.sql`
 2. Verify required tables and policies are present.
 
 ## Rollback Strategy
@@ -45,3 +46,12 @@
   - Reject invalid payload
   - Trigger server-side regeneration
   - Log schema mismatch fields
+
+## Server Error Code Mapping
+- `AUTH_REQUIRED`: 인증 누락. 클라이언트 재로그인 또는 세션 복구 필요.
+- `FORBIDDEN_ROLE`: 권한 부족. 역할 A/B 권한 확인 필요.
+- `TOKEN_REFRESH_RETRY`: 토큰 갱신 일시 실패. 자동 재시도 대기.
+- `TOKEN_REAUTH_REQUIRED`: 토큰 재연결 필요. 사용자 OAuth 재인증 유도.
+- `SYNC_RETRY_SCHEDULED`: 동기화 실패 후 자동 재시도 예약됨.
+- `SYNC_RETRY_EXHAUSTED`: 최대 재시도 초과. 운영 수동 확인 필요.
+- `INTERNAL_ERROR`: 서버 내부 예외. requestId 기준 로그 조회 필요.

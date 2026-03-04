@@ -18,3 +18,5 @@ export interface CanonicalExamEvent {
 }
 
 export type SyncStatus = "not_connected" | "pending" | "synced" | "failed";
+
+export type JobSyncState = "pending" | "failed" | "retrying" | "synced" | "manual_review";
