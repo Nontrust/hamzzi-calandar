@@ -6,7 +6,10 @@ import { runCalendarSyncJob } from "../src/calendarSyncJob";
 import { runInterviewSessionCompletion } from "../src/interviewJob";
 import {
   HAMJJI_BRAND_LEXICON,
+  buildAnniversaryItem,
   containsBlockedWord,
+  formatAnniversaryHint,
+  formatAnniversaryTitle,
   getBrandLabel,
   getRoleLabel,
   validateLexicon
@@ -68,5 +71,19 @@ describe("integration domain behavior", () => {
     expect(result.modeLabel).toBe("면접 연습 모드");
     expect(result.reportHeader).toBe("면접 피드백 노트");
     expect(result.report.strengths).toHaveLength(3);
+  });
+
+  it("formats anniversary title and d-day helper copy", () => {
+    expect(formatAnniversaryTitle("햄찌데이", 100)).toBe("햄찌데이 · D+100");
+    expect(formatAnniversaryHint("2026-03-04", "2026-03-12")).toContain("8일 남");
+    expect(formatAnniversaryHint("2026-03-04", "2026-03-04")).toContain("오늘");
+    expect(formatAnniversaryHint("2026-03-04", "2026-03-01")).toContain("3일 지났");
+
+    const item = buildAnniversaryItem(
+      { name: "햄찌데이", baseDate: "2025-11-25", dayOffset: 100 },
+      "2026-03-04"
+    );
+    expect(item.title).toContain("D+100");
+    expect(item.hint).toContain("기준일");
   });
 });

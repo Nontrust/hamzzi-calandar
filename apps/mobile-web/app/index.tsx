@@ -91,9 +91,16 @@ export default function HomeScreen() {
 
       <Text style={{ fontWeight: "700", marginTop: 8 }}>이번 달 달력 미리보기</Text>
       {monthItems.map((item) => (
-        <Text key={`${item.kind}-${item.date}-${item.title}`}>
-          {item.kind === "anniversary" ? "● 기념일" : "○ 일반 일정"} {item.date} {item.title}
-        </Text>
+        <View key={`${item.kind}-${item.date}-${item.title}`} style={{ gap: 2 }}>
+          <Text>
+            {item.kind === "anniversary" ? "● 기념일" : "○ 일반 일정"} {item.date} {item.title}
+          </Text>
+          {item.kind === "anniversary" ? (
+            <Text style={{ color: "#555" }}>
+              {anniversaryItem.dDayLabel} ({anniversaryItem.hint})
+            </Text>
+          ) : null}
+        </View>
       ))}
 
       <Button title="생체인증 권한 요청(필요할 때만)" onPress={() => void requestBiometricOnDemand()} />
