@@ -5,3 +5,11 @@ node_modules/
 dist/
 coverage/
 .DS_Store
+
+# Local temporary logs
+.tmp_*.log
+.tmp_expo*.log
+
+# Legacy OpenSpec paths (use openspec/specs and openspec/changes)
+openspec/spec/
+openspec/tasks/
