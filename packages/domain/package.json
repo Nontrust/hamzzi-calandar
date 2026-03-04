@@ -1,0 +1,16 @@
+{
+  "name": "@nahamzzi/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --pool=vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
+
