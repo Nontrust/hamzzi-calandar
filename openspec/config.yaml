@@ -1,7 +1,7 @@
-schema: spec-driven
+﻿schema: spec-driven
 
 context: |
-  Product: 공기업 합격 코치 (커플 스터디)
+  Product: 햄찌의 뽀짝 하루 캘린더 (커플 스터디)
   Primary users:
   - 사용자 A: 설정/관리/보상 콘텐츠 관리
   - 사용자 B: 스터디 실행/모의면접 사용자
@@ -19,7 +19,7 @@ context: |
   Writing conventions:
   - 모든 OpenSpec 산출물(.md)은 기본적으로 한국어로 작성한다.
   - 영어 사용은 코드, API 이름, CLI 명령어, 고유 식별자에 한해 허용한다.
-  - Requirement 문장은 영어 규범 문장으로 작성하고 SHALL 또는 MUST를 포함한다.
+  - Requirement 문장은 한국어 규범 문장으로 작성하고 "시스템은 ... 해야 한다" 형식을 사용한다.
   - Scenario는 한국어로 작성하되 WHEN/THEN 형식을 유지한다.
   - 구현 세부보다 사용자 행동과 시스템 보장을 우선 서술한다.
 
@@ -41,3 +41,4 @@ rules:
     - 작업 설명과 검증 문구는 한국어로 작성한다.
     - 사용자 가치가 완결되는 단위로 작업을 분할한다.
     - 각 작업에 검증 방법(테스트/수동 검증)을 함께 적는다.
+

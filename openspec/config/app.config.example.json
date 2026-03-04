@@ -1,6 +1,6 @@
-{
+﻿{
   "app": {
-    "name": "공기업 합격 스터디/보상 앱",
+    "name": "햄찌의 뽀짝 하루 캘린더",
     "timezone": "Asia/Seoul",
     "minSessionMinutesForStats": 20,
     "dailyUnlockLimit": 1,
@@ -87,3 +87,4 @@
     "allowHardDeleteAllData": true
   }
 }
+
