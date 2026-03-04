@@ -1,0 +1,12 @@
+﻿{
+  "expo": {
+    "name": "햄찌의 뽀짝 하루 캘린더",
+    "slug": "nahamzzi",
+    "scheme": "nahamzzi",
+    "platforms": ["ios", "web"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
+
