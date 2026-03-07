@@ -2,10 +2,11 @@
 import * as Calendar from "expo-calendar";
 import * as ImagePicker from "expo-image-picker";
 import * as LocalAuthentication from "expo-local-authentication";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, SafeAreaView, ScrollView, StatusBar, Text, TextInput, View } from "react-native";
+import { Image, Pressable, SafeAreaView, ScrollView, StatusBar, Text, View } from "react-native";
 import { canManageRewards, getRoleHelper, getRoleLabel, type UserRole } from "@nahamzzi/domain";
-import { getAuthSession, login, logout, type AuthSession } from "../src/authClient";
+import { logout } from "../../src/authClient";
 import {
   createDefaultAnniversary,
   fetchAnniversaries,
@@ -13,13 +14,13 @@ import {
   mapErrorToMessage,
   removeAnniversary,
   renameAnniversary
-} from "../src/anniversaryClient";
-import { styles } from "./src/ui/appStyles";
-import { type ButtonVariant, theme } from "./src/ui/theme";
+} from "../../src/anniversaryClient";
+import { useAuthSession } from "../src/auth/AuthSessionProvider";
+import { AppButton } from "../src/ui/AppButton";
+import { styles } from "../src/ui/appStyles";
 
 const ACTIVE_ROLE_KEY = "active-role";
-const BRAND_SYMBOL = require("../../../openspec/statics/nahamzzi_symbol_fit.png");
-const BRAND_MARK = require("../../../openspec/statics/nahamzzi_mark.png");
+const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
 type MonthItem = { kind: "exam" | "anniversary"; date: string; title: string };
 
@@ -43,48 +44,9 @@ function getItemKindLabel(kind: MonthItem["kind"]) {
   return kind === "anniversary" ? "기념일" : "시험";
 }
 
-function AppButton({
-  label,
-  onPress,
-  variant = "primary",
-  disabled = false
-}: {
-  label: string;
-  onPress: () => void;
-  variant?: ButtonVariant;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.buttonBase,
-        variant === "primary" && styles.buttonPrimary,
-        variant === "secondary" && styles.buttonSecondary,
-        variant === "danger" && styles.buttonDanger,
-        disabled && styles.buttonDisabled,
-        pressed && !disabled && styles.buttonPressed
-      ]}
-    >
-      <Text
-        style={[
-          styles.buttonText,
-          variant === "secondary" ? styles.buttonTextSecondary : styles.buttonTextPrimary
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 export default function HomeScreen() {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [loginId, setLoginId] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginNotice, setLoginNotice] = useState("로그인 후 서비스를 이용해 주세요.");
-
+  const router = useRouter();
+  const { session, setSession } = useAuthSession();
   const [activeRole, setActiveRole] = useState<UserRole | null>(null);
   const [apiNotice, setApiNotice] = useState("연결됨");
   const [monthItems, setMonthItems] = useState<MonthItem[]>([]);
@@ -96,8 +58,8 @@ export default function HomeScreen() {
   });
 
   useEffect(() => {
-    void initializeAuth();
-  }, []);
+    void initializeRole();
+  }, [session]);
 
   useEffect(() => {
     if (!session || !activeRole) {
@@ -114,34 +76,21 @@ export default function HomeScreen() {
     return { exams, anniversaries, total: monthItems.length };
   }, [monthItems]);
 
-  async function initializeAuth() {
-    const existing = await getAuthSession();
-    setSession(existing);
-    if (!existing) {
+  async function initializeRole() {
+    if (!session) {
       setActiveRole(null);
       return;
     }
+
     const savedRole = await AsyncStorage.getItem(ACTIVE_ROLE_KEY);
     if (savedRole === "A" || savedRole === "B") {
       setActiveRole(savedRole);
-    } else {
-      setActiveRole(existing.user.defaultRole);
-      await AsyncStorage.setItem(ACTIVE_ROLE_KEY, existing.user.defaultRole);
-    }
-  }
-
-  async function onLogin() {
-    const result = await login(loginId, password);
-    if (!result.success) {
-      setLoginNotice(mapErrorToMessage(result.errorCode));
       return;
     }
-    setSession(result.session);
-    const role = result.session.user.defaultRole;
-    setActiveRole(role);
-    await AsyncStorage.setItem(ACTIVE_ROLE_KEY, role);
-    setLoginNotice(`${result.session.user.displayName}님, 반가워요.`);
-    setPassword("");
+
+    const fallbackRole = session.user.defaultRole;
+    setActiveRole(fallbackRole);
+    await AsyncStorage.setItem(ACTIVE_ROLE_KEY, fallbackRole);
   }
 
   async function onLogout() {
@@ -150,6 +99,7 @@ export default function HomeScreen() {
     setSession(null);
     setActiveRole(null);
     setApiNotice("로그아웃되었습니다.");
+    router.replace("/login");
   }
 
   async function selectRole(role: UserRole) {
@@ -248,45 +198,7 @@ export default function HomeScreen() {
   }
 
   if (!session) {
-    return (
-      <SafeAreaView style={styles.authRoot}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.authCard}>
-          <View style={styles.authHero}>
-            <View style={styles.authHeroGlowPrimary} />
-            <View style={styles.authHeroGlowSecondary} />
-            <Image source={BRAND_SYMBOL} style={styles.biImage} resizeMode="contain" accessible={false} />
-          </View>
-          <Text style={styles.authTitle}>로그인</Text>
-          <Text style={styles.authSubtitle}>데모 계정으로 앱에 접속해 주세요.</Text>
-
-          <TextInput
-            placeholder="아이디"
-            value={loginId}
-            onChangeText={setLoginId}
-            autoCapitalize="none"
-            style={styles.input}
-            placeholderTextColor={theme.colors.textMuted}
-          />
-          <TextInput
-            placeholder="비밀번호"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-            placeholderTextColor={theme.colors.textMuted}
-          />
-
-          <AppButton label="로그인" onPress={() => void onLogin()} />
-          <Text style={styles.noticeText}>{loginNotice}</Text>
-
-          <View style={styles.demoRow}>
-            <Text style={styles.demoChip}>nahamzzi</Text>
-            <Text style={styles.demoChip}>deed1515</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
+    return null;
   }
 
   return (
