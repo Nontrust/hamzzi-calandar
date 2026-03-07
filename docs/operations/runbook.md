@@ -2,6 +2,7 @@
 
 ## Initial Defaults
 - Runtime: TypeScript + Expo + Supabase-compatible Postgres
+- Mobile API base URL: `EXPO_PUBLIC_API_BASE_URL` (required for server-first anniversary/calendar calls)
 - Sync schedule: `07:00`, `13:00`, `19:00` (server time)
 - Token encryption: `NAHAMZZI_TOKEN_ENCRYPTION_KEY` must be set as a 32-byte key (hex/base64)
 - Calendar sync transitions:
@@ -31,6 +32,9 @@
 2. Disable auth gate via feature flag if emergency rollback is needed.
 3. Roll back migrations in reverse order with dedicated rollback SQL.
 4. Keep data paths read-only during partial rollback windows.
+
+## QA Evidence
+- Manual regression log: `docs/qa/manual-regression-2026-03-07.md`
 
 ## Incident Response
 - Auth failure spike:
