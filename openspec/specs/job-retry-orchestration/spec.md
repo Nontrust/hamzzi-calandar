@@ -1,0 +1,26 @@
+# job-retry-orchestration Specification
+
+## Purpose
+TBD - created by archiving change server-foundation-hardening. Update Purpose after archive.
+## Requirements
+### Requirement: 작업 재시도와 백오프 정책
+시스템은 외부 연동 실패 작업에 대해 지수 백오프 기반 재시도 정책을 적용해야 한다. (SHALL)
+
+#### Scenario: 일시적 외부 오류 발생
+- **WHEN** 외부 API가 일시적으로 실패 응답을 반환한다
+- **THEN** 시스템은 즉시 종료하지 않고 백오프 규칙에 따라 재시도를 예약한다
+
+### Requirement: 상태 전이 일관성 보장
+시스템은 작업 상태를 `pending`, `failed`, `retrying`, `synced`로 일관되게 기록해야 한다. (SHALL)
+
+#### Scenario: 실패 후 재시도 성공
+- **WHEN** 실패했던 작업이 재시도에서 성공한다
+- **THEN** 시스템은 중간 상태와 최종 상태 전이를 순서대로 기록한다
+
+### Requirement: 최대 재시도 초과 보호
+시스템은 최대 재시도 횟수 초과 시 무한 반복을 중단하고 운영자 확인 대상 상태로 전환해야 한다. (SHALL)
+
+#### Scenario: 최대 재시도 도달
+- **WHEN** 작업이 설정된 최대 재시도 횟수까지 모두 실패한다
+- **THEN** 시스템은 자동 재시도를 중단하고 수동 확인 필요 상태를 기록한다
+

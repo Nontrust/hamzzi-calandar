@@ -1,21 +1,15 @@
 ## Purpose
-용어집 참조: `openspec/docs/glossary.md`
 
-공기업 채용/시험 일정을 외부 Open API에서 안정적으로 수집하고 표준 이벤트로 정규화해 Google Calendar에 동기화한다. 목표는 일정 누락을 최소화하고 마감 대응을 자동화하는 것이다.
-## Requirements
+일정 수집/캘린더 동기화에서 서버단 복구 정책을 강화해 외부 API 장애 시에도 안정적인 상태 전이와 재시도를 보장한다.
+
+## MODIFIED Requirements
+
 ### Requirement: 정기 수집 실행
 시스템은 최소 1개 이상의 설정된 Open API 소스에서 일정 데이터를 정기적으로 수집해야 하며, 수집 실패 시 재시도 가능한 상태를 기록해야 한다. (SHALL)
 
 #### Scenario: 정기 수집 트리거 실행
 - **WHEN** 설정된 수집 시간이 도래한다
 - **THEN** 시스템은 소스 API를 호출하고 실패 시 재시도 정책을 위한 상태를 함께 기록한다
-
-### Requirement: 표준 스키마 매핑 및 중복 제거
-The system SHALL map source fields into a canonical exam event model and deduplicate events by `(organization, title, apply period)`.
-
-#### Scenario: 동일 공고 중복 수집
-- **WHEN** 동일한 기관/제목/접수기간 조합의 일정이 중복 수집된다
-- **THEN** 시스템은 중복을 제거하고 단일 표준 이벤트로 저장한다
 
 ### Requirement: 캘린더 업서트 및 실패 복구 상태
 시스템은 연결된 사용자의 캘린더 이벤트를 업서트하고, 실패 시 서버단 재시도/백오프/최대 횟수 정책을 적용한 상태 전이를 추적해야 한다. (SHALL)
@@ -28,24 +22,11 @@ The system SHALL map source fields into a canonical exam event model and dedupli
 - **WHEN** 재시도가 최대 횟수를 초과해 모두 실패한다
 - **THEN** 시스템은 자동 재시도를 중단하고 운영자 확인 대상 상태로 기록한다
 
+## ADDED Requirements
+
 ### Requirement: 표준 실패 코드 및 복구 안내 반환
 시스템은 클라이언트에 실패 원인과 복구 행동을 해석 가능한 표준 실패 코드로 반환해야 한다. (SHALL)
 
 #### Scenario: 동기화 실패 응답 전달
 - **WHEN** 클라이언트가 동기화 작업 결과를 조회한다
 - **THEN** 시스템은 실패 코드, 사용자 안내 메시지, 요청 추적 ID를 함께 반환한다
-
-### Requirement: 캘린더 이벤트 제목 브랜드 템플릿
-시스템은 사용자 노출 일정 이벤트 제목을 브랜드 템플릿으로 생성해야 한다. (SHALL)
-
-#### Scenario: 일정 이벤트 제목 생성
-- **WHEN** 접수/시험/발표 이벤트 제목을 생성한다
-- **THEN** 시스템은 `데이트데이 · [기관] <단계>` 템플릿을 적용한 제목을 사용한다
-
-### Requirement: 연동 실패 메시지 이중 표기
-시스템은 연동 오류 메시지에서 브랜드 톤과 복구 안내를 함께 제공해야 한다. (SHALL)
-
-#### Scenario: 캘린더 동기화 실패
-- **WHEN** 캘린더 동기화가 실패한다
-- **THEN** 시스템은 브랜드 톤 메시지와 재시도 안내를 함께 노출한다
-

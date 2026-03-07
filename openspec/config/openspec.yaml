@@ -1,4 +1,4 @@
-﻿# OpenSpec 보조 설정(프로젝트 문맥 공유용)
+# OpenSpec 보조 설정(프로젝트 문맥 공유용)
 # 참고: CLI 기본 구조는 openspec/specs 및 openspec/changes 이다.
 
 project:

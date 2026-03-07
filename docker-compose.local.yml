@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nahamzzi-postgres
+    environment:
+      POSTGRES_USER: nahamzzi
+      POSTGRES_PASSWORD: nahamzzi
+      POSTGRES_DB: nahamzzi
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nahamzzi -d nahamzzi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  adminer:
+    image: adminer:4
+    container_name: nahamzzi-adminer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  migrate:
+    image: postgres:16-alpine
+    container_name: nahamzzi-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: nahamzzi
+    volumes:
+      - ./infra/local/sql:/bootstrap:ro
+      - ./infra/migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      set -e;
+      for f in /bootstrap/*.sql; do
+        [ -e "$f" ] || continue;
+        echo "Applying $f";
+        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$f";
+      done;
+      for f in /migrations/*.sql; do
+        [ -e "$f" ] || continue;
+        echo "Applying $f";
+        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$f";
+      done;
+      echo "Migrations complete";
+
+volumes:
+  pgdata:

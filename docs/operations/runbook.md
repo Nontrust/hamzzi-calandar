@@ -28,6 +28,7 @@
    - `infra/migrations/0001_schema.sql`
    - `infra/migrations/0002_rls_and_storage.sql`
    - `infra/migrations/0003_server_foundation.sql`
+   - `infra/migrations/0004_anniversaries.sql`
 2. Verify required tables and policies are present.
 
 ## Rollback Strategy
@@ -55,3 +56,6 @@
 - `SYNC_RETRY_SCHEDULED`: 동기화 실패 후 자동 재시도 예약됨.
 - `SYNC_RETRY_EXHAUSTED`: 최대 재시도 초과. 운영 수동 확인 필요.
 - `INTERNAL_ERROR`: 서버 내부 예외. requestId 기준 로그 조회 필요.
+- `VALIDATION_ERROR`: 기념일 입력값 검증 실패. 입력 형식/범위 재확인 필요.
+- `ANNIVERSARY_NOT_FOUND`: 대상 기념일이 없거나 비활성 상태.
+- `FORBIDDEN_OWNER`: 본인 소유가 아닌 기념일 접근/수정/삭제 요청 차단.
