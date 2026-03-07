@@ -1,0 +1,30 @@
+# mobile-ui-shell Specification
+
+## Purpose
+TBD - created by archiving change revamp-mobile-ui-shell. Update Purpose after archive.
+## Requirements
+### Requirement: 브랜드 자산 일관 노출
+시스템은 로그인 화면과 메인 화면에서 공식 로고/BI 자산을 동일한 브랜드 규칙으로 노출해야 한다. (MUST)
+
+#### Scenario: 로그인 화면 브랜드 노출
+- **WHEN** 사용자가 로그인 화면에 진입한다
+- **THEN** 시스템은 로고와 BI 이미지를 지정된 영역에 일관된 비율로 표시해야 한다
+
+#### Scenario: 메인 화면 브랜드 노출
+- **WHEN** 사용자가 로그인 후 메인 화면을 본다
+- **THEN** 시스템은 헤더 영역에 로고를 표시해 앱 식별성을 유지해야 한다
+
+### Requirement: 공통 스타일 토큰 기반 화면 구성
+시스템은 색상, 간격, 라운드, 타이포를 공통 스타일 토큰으로 정의하고 주요 화면에서 재사용해야 한다. (MUST)
+
+#### Scenario: 공통 토큰 적용
+- **WHEN** 로그인/메인 화면이 렌더링된다
+- **THEN** 시스템은 화면별 하드코딩 스타일 대신 공통 토큰을 우선 참조해야 한다
+
+### Requirement: 앱형 카드 레이아웃 유지
+시스템은 로그인 이후 핵심 정보(역할, 요약, 타임라인, 빠른 액션)를 카드 기반 섹션으로 분리해 가독성을 보장해야 한다. (MUST)
+
+#### Scenario: 메인 섹션 구분
+- **WHEN** 사용자가 메인 화면을 스크롤한다
+- **THEN** 시스템은 각 기능 블록을 시각적으로 구분된 카드 섹션으로 표시해야 한다
+
