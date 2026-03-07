@@ -11,6 +11,9 @@
     "dev": "npm run dev:mobile",
     "dev:mobile": "npm --workspace apps/mobile-web run dev",
     "dev:web": "npm --workspace apps/mobile-web run web",
+    "infra:up": "docker compose -f docker-compose.local.yml up -d postgres adminer",
+    "infra:migrate": "docker compose -f docker-compose.local.yml run --rm migrate",
+    "infra:down": "docker compose -f docker-compose.local.yml down -v",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   }

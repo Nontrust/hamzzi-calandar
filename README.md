@@ -13,3 +13,9 @@
 1. Install dependencies: `npm install`
 2. Run mobile/web app: `npm run dev:mobile`
 3. Run web only: `npm run dev:web`
+
+## Local Postgres (Docker Compose)
+1. Start DB stack: `npm run infra:up`
+2. Apply migrations: `npm run infra:migrate`
+3. Open Adminer: `http://localhost:8080`
+4. Stop stack: `npm run infra:down`
