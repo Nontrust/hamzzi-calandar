@@ -4,11 +4,15 @@
 개인 사진, 메모, 면접 대화/리포트 등 민감 데이터를 보호하고 최소 권한 원칙 기반의 권한 요청 흐름을 제공한다.
 ## Requirements
 ### Requirement: 민감 데이터 보호 통제
-시스템은 개인 사진, 메모, 면접 기록 등 민감 데이터를 저장할 때 서버단 접근 검증, 저장 경로 통제, 감사 로그 기록을 함께 적용해야 한다. (SHALL)
+시스템은 개인 사진, 메모, 면접 기록 등 민감 데이터를 저장할 때 서버단 접근 검증, 저장 경로 통제, 감사 로그 기록을 함께 적용해야 하며, 기념일 데이터도 동일 소유권 보호 정책을 적용해야 한다. (MUST)
 
 #### Scenario: 민감 사용자 데이터 저장
 - **WHEN** 사용자가 사진, 개인 메모, 면접 기록을 저장한다
 - **THEN** 시스템은 권한 검증을 통과한 요청만 허용하고 보호 정책이 적용된 저장 경로와 감사 로그를 기록한다
+
+#### Scenario: 기념일 데이터 접근
+- **WHEN** 사용자가 기념일 CRUD API를 호출한다
+- **THEN** 시스템은 요청 사용자와 데이터 소유자 일치 여부를 검증한 뒤에만 처리한다
 
 ### Requirement: 사용자 요청 기반 전체 삭제
 The system SHALL provide a confirmed hard-delete flow for full user data removal.
@@ -25,7 +29,7 @@ The system SHALL provide a confirmed hard-delete flow for full user data removal
 - **THEN** 시스템은 그 시점에만 캘린더 권한을 요청하고 서버는 권한 상태 검증 결과에 따라 동기화를 진행한다
 
 ### Requirement: 권한 거부 이벤트 감사 로그
-시스템은 권한 거부 또는 민감 API 접근 실패 이벤트를 요청 추적 ID와 함께 감사 로그에 남겨야 한다. (SHALL)
+시스템은 권한 거부 또는 민감 API 접근 실패 이벤트를 요청 추적 ID와 함께 감사 로그에 남겨야 하며, 기념일 데이터 권한 거부도 동일하게 기록해야 한다. (SHALL)
 
 #### Scenario: 권한 거부 응답 반환
 - **WHEN** 권한 없는 사용자가 민감 API를 호출한다
