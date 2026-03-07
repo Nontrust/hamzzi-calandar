@@ -3,6 +3,7 @@
 ## Initial Defaults
 - Runtime: TypeScript + Expo + Supabase-compatible Postgres
 - Sync schedule: `07:00`, `13:00`, `19:00` (server time)
+- Token encryption: `NAHAMZZI_TOKEN_ENCRYPTION_KEY` must be set as a 32-byte key (hex/base64)
 - Calendar sync transitions:
   - `not_connected -> pending -> synced`
   - `pending -> failed -> pending` (retry)
@@ -23,6 +24,7 @@
   - `nahamzzi` (user-a)
   - `deed1515` (user-b)
 - Password hashes must be stored as `password_hash`; never store plain passwords in migration docs/code comments.
+- Token values must be encrypted at rest (AES-GCM), never URI/base64-only encoded.
 
 ## Rollback Strategy
 1. Disable scheduled jobs first (`cron.unschedule('exam-ingestion-sync')`).
@@ -33,6 +35,7 @@
 ## Incident Response
 - Auth failure spike:
   - Check session expiry configuration and storage health.
+  - Check `NAHAMZZI_TOKEN_ENCRYPTION_KEY` presence/format mismatch in runtime.
   - Check repeated invalid credential attempts and rate-limit events.
 - Calendar sync failure spike:
   - Separate auth failures from external sync failures.

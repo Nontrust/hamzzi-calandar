@@ -1,3 +1,5 @@
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+
 export type ExternalProvider = "google_calendar";
 export type TokenState = "active" | "refresh_retry" | "reauth_required";
 
@@ -19,18 +21,65 @@ export interface RefreshResult {
 }
 
 const tokenStore = new Map<string, ExternalTokenRecord>();
+const TOKEN_KEY_ENV = "NAHAMZZI_TOKEN_ENCRYPTION_KEY";
+const TEST_FALLBACK_KEY_HEX = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
 function tokenKey(provider: ExternalProvider, userId: string): string {
   return `${provider}:${userId}`;
 }
 
 export function encryptToken(token: string): string {
-  return `enc:${encodeURIComponent(token)}`;
+  const key = resolveEncryptionKey();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `enc:v1:${iv.toString("base64")}:${authTag.toString("base64")}:${encrypted.toString("base64")}`;
 }
 
 export function decryptToken(encrypted: string): string {
-  const encoded = encrypted.startsWith("enc:") ? encrypted.slice(4) : encrypted;
-  return decodeURIComponent(encoded);
+  if (encrypted.startsWith("enc:v1:")) {
+    const parts = encrypted.split(":");
+    if (parts.length !== 5) {
+      throw new Error("Invalid encrypted token payload.");
+    }
+    const key = resolveEncryptionKey();
+    const iv = Buffer.from(parts[2], "base64");
+    const authTag = Buffer.from(parts[3], "base64");
+    const ciphertext = Buffer.from(parts[4], "base64");
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString("utf8");
+  }
+
+  // Backward-compatibility path for pre-migration demo tokens.
+  if (encrypted.startsWith("enc:")) {
+    return decodeURIComponent(encrypted.slice(4));
+  }
+  return encrypted;
+}
+
+function resolveEncryptionKey(): Buffer {
+  const raw = process.env[TOKEN_KEY_ENV];
+  if (!raw || raw.trim().length === 0) {
+    if (process.env.NODE_ENV === "test") {
+      return Buffer.from(TEST_FALLBACK_KEY_HEX, "hex");
+    }
+    throw new Error(`${TOKEN_KEY_ENV} is required and must be a 32-byte key (hex/base64).`);
+  }
+
+  const normalized = raw.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(normalized)) {
+    return Buffer.from(normalized, "hex");
+  }
+
+  const candidate = Buffer.from(normalized, "base64");
+  if (candidate.length === 32) {
+    return candidate;
+  }
+
+  throw new Error(`${TOKEN_KEY_ENV} must decode to 32 bytes.`);
 }
 
 export function saveExternalToken(
