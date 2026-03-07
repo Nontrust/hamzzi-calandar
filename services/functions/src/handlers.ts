@@ -10,6 +10,16 @@ import {
   type UpdateAnniversaryInput,
   updateAnniversary
 } from "./anniversaryStore";
+import {
+  buildActorFromSession,
+  loginByCredentials,
+  logoutSession,
+  seedDemoUsers,
+  type SessionRecord,
+  type AuthUserRecord,
+  UserAuthError,
+  validateSession
+} from "./authStore";
 import { recordAuditEvent } from "./auditLog";
 import { runCalendarSyncJob } from "./calendarSyncJob";
 import { runExamIngestionSync } from "./examIngestionSync";
@@ -23,7 +33,116 @@ function toFailureResponse(error: unknown, requestId: string): ApiResponse<never
   if (error instanceof AnniversaryError) {
     return failureResponse(error.code, error.message, requestId);
   }
-  return failureResponse("INTERNAL_ERROR", "서버 처리 중 오류가 발생했습니다.", requestId);
+  if (error instanceof UserAuthError) {
+    return failureResponse(error.code, error.message, requestId);
+  }
+  return failureResponse("INTERNAL_ERROR", "Unexpected server error.", requestId);
+}
+
+export async function handleLogin(
+  loginId: string,
+  password: string
+): Promise<ApiResponse<{ user: Pick<AuthUserRecord, "id" | "loginId" | "defaultRole" | "displayName">; session: Pick<SessionRecord, "token" | "expiresAt" | "state"> }>> {
+  const ctx = createRequestContext();
+  try {
+    seedDemoUsers(ctx.now);
+    const { user, session } = loginByCredentials(loginId, password, ctx.now);
+    recordAuditEvent({
+      requestId: ctx.requestId,
+      userId: user.id,
+      action: "auth.login",
+      resource: "sessions",
+      outcome: "success",
+      at: ctx.now.toISOString()
+    });
+    return successResponse(
+      {
+        user: {
+          id: user.id,
+          loginId: user.loginId,
+          defaultRole: user.defaultRole,
+          displayName: user.displayName
+        },
+        session: {
+          token: session.token,
+          expiresAt: session.expiresAt,
+          state: session.state
+        }
+      },
+      ctx.requestId
+    );
+  } catch (error) {
+    recordAuditEvent({
+      requestId: ctx.requestId,
+      userId: null,
+      action: "auth.login",
+      resource: "sessions",
+      outcome: error instanceof UserAuthError ? "denied" : "error",
+      reason: error instanceof Error ? error.message : "unknown",
+      at: ctx.now.toISOString()
+    });
+    return toFailureResponse(error, ctx.requestId);
+  }
+}
+
+export async function handleSessionValidate(
+  sessionToken: string
+): Promise<ApiResponse<{ userId: string; loginId: string; defaultRole: RequestActor["role"]; expiresAt: string }>> {
+  const ctx = createRequestContext();
+  try {
+    const { user, session } = validateSession(sessionToken, ctx.now);
+    return successResponse(
+      {
+        userId: user.id,
+        loginId: user.loginId,
+        defaultRole: user.defaultRole,
+        expiresAt: session.expiresAt
+      },
+      ctx.requestId
+    );
+  } catch (error) {
+    recordAuditEvent({
+      requestId: ctx.requestId,
+      userId: null,
+      action: "auth.session.validate",
+      resource: "sessions",
+      outcome: error instanceof UserAuthError ? "denied" : "error",
+      reason: error instanceof Error ? error.message : "unknown",
+      at: ctx.now.toISOString()
+    });
+    return toFailureResponse(error, ctx.requestId);
+  }
+}
+
+export async function handleLogout(sessionToken: string): Promise<ApiResponse<{ state: SessionRecord["state"] }>> {
+  const ctx = createRequestContext();
+  try {
+    const session = logoutSession(sessionToken, ctx.now);
+    recordAuditEvent({
+      requestId: ctx.requestId,
+      userId: session.userId,
+      action: "auth.logout",
+      resource: "sessions",
+      outcome: "success",
+      at: ctx.now.toISOString()
+    });
+    return successResponse({ state: session.state }, ctx.requestId);
+  } catch (error) {
+    recordAuditEvent({
+      requestId: ctx.requestId,
+      userId: null,
+      action: "auth.logout",
+      resource: "sessions",
+      outcome: error instanceof UserAuthError ? "denied" : "error",
+      reason: error instanceof Error ? error.message : "unknown",
+      at: ctx.now.toISOString()
+    });
+    return toFailureResponse(error, ctx.requestId);
+  }
+}
+
+export function actorFromSession(sessionToken: string, role: RequestActor["role"] | null): RequestActor {
+  return buildActorFromSession(sessionToken, role);
 }
 
 export async function handleExamIngestionSync(actor: RequestActor | null = null): Promise<ApiResponse<ReturnType<typeof runExamIngestionSync>>> {
@@ -234,9 +353,7 @@ export async function handleCalendarMonthView(
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
-    const examItems = [
-      { kind: "exam" as const, date: `${month}-12`, title: "데이트데이 · [공기업] 필기시험" }
-    ];
+    const examItems = [{ kind: "exam" as const, date: `${month}-12`, title: "Exam schedule placeholder" }];
     const anniversaryItems = buildAnniversaryMonthItems(authed.userId, month);
     const items = [...examItems, ...anniversaryItems].sort((a, b) => a.date.localeCompare(b.date));
     recordAuditEvent({

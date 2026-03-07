@@ -1,27 +1,11 @@
 # Operations Runbook
 
 ## Initial Defaults
-- Runtime: TypeScript, Expo, Supabase
+- Runtime: TypeScript + Expo + Supabase-compatible Postgres
 - Sync schedule: `07:00`, `13:00`, `19:00` (server time)
-- Calendar sync status transitions:
-  - `not_connected` -> `pending` -> `synced`
-  - `pending` -> `failed` -> `pending` (retry)
-- Brand copy policy:
-  - 톤 비율은 기본 70 : 키치 30을 유지
-  - 내부 식별자는 유지하고, 화면 노출은 용어집 매핑을 사용
-  - 한 화면의 `햄` 계열 단어는 최대 1~2회로 제한
-  - 금지어 포함 문구는 저장/생성 불가
-  - 키치 라벨 누락 시 기본 라벨 fallback
-
-## Calendar Title Guide
-- 기본 템플릿: `데이트데이 · [기관] <단계>`
-- 단계 예시: `원서접수 시작`, `원서접수 마감`, `필기시험`, `발표`
-- 길이 가이드:
-  - 제목 40자 초과 시 기관명 축약 후 재생성
-  - 재생성 후에도 초과하면 기본 템플릿(`[기관] <단계>`)으로 fallback
-- 오류 메시지:
-  - 브랜드 톤 + 복구 안내를 함께 표시
-  - 예: `일정 동기화 잠깐 삐끗 (일정 동기화 실패: 다시 시도해줘)`
+- Calendar sync transitions:
+  - `not_connected -> pending -> synced`
+  - `pending -> failed -> pending` (retry)
 
 ## Migration Apply
 1. Apply SQL migrations in order:
@@ -29,33 +13,39 @@
    - `infra/migrations/0002_rls_and_storage.sql`
    - `infra/migrations/0003_server_foundation.sql`
    - `infra/migrations/0004_anniversaries.sql`
-2. Verify required tables and policies are present.
+   - `infra/migrations/0005_auth_sessions.sql`
+2. Verify required tables/indexes exist:
+   - `users`, `sessions`, `anniversaries`
+
+## Auth Seed Procedure
+- Demo accounts are seeded only as hashed passwords.
+- Seeded login IDs:
+  - `nahamzzi` (user-a)
+  - `deed1515` (user-b)
+- Password hashes must be stored as `password_hash`; never store plain passwords in migration docs/code comments.
 
 ## Rollback Strategy
 1. Disable scheduled jobs first (`cron.unschedule('exam-ingestion-sync')`).
-2. Disable function endpoints or block by feature flag.
-3. Revert migration in reverse order with dedicated rollback SQL.
-4. 용어집 토글을 기본 라벨 세트로 전환한다.
-5. Verify client behavior with read-only mode if partial rollback is required.
+2. Disable auth gate via feature flag if emergency rollback is needed.
+3. Roll back migrations in reverse order with dedicated rollback SQL.
+4. Keep data paths read-only during partial rollback windows.
 
 ## Incident Response
-- Sync failure spike:
-  - Check external API quota and network errors
-  - Keep failed records for replay
-  - Trigger retry after root-cause mitigation
-- AI report validation failure:
-  - Reject invalid payload
-  - Trigger server-side regeneration
-  - Log schema mismatch fields
+- Auth failure spike:
+  - Check session expiry configuration and storage health.
+  - Check repeated invalid credential attempts and rate-limit events.
+- Calendar sync failure spike:
+  - Separate auth failures from external sync failures.
+  - Retry external integration after root-cause mitigation.
 
 ## Server Error Code Mapping
-- `AUTH_REQUIRED`: 인증 누락. 클라이언트 재로그인 또는 세션 복구 필요.
-- `FORBIDDEN_ROLE`: 권한 부족. 역할 A/B 권한 확인 필요.
-- `TOKEN_REFRESH_RETRY`: 토큰 갱신 일시 실패. 자동 재시도 대기.
-- `TOKEN_REAUTH_REQUIRED`: 토큰 재연결 필요. 사용자 OAuth 재인증 유도.
-- `SYNC_RETRY_SCHEDULED`: 동기화 실패 후 자동 재시도 예약됨.
-- `SYNC_RETRY_EXHAUSTED`: 최대 재시도 초과. 운영 수동 확인 필요.
-- `INTERNAL_ERROR`: 서버 내부 예외. requestId 기준 로그 조회 필요.
-- `VALIDATION_ERROR`: 기념일 입력값 검증 실패. 입력 형식/범위 재확인 필요.
-- `ANNIVERSARY_NOT_FOUND`: 대상 기념일이 없거나 비활성 상태.
-- `FORBIDDEN_OWNER`: 본인 소유가 아닌 기념일 접근/수정/삭제 요청 차단.
+- `AUTH_REQUIRED`: Missing/invalid authentication context
+- `AUTH_INVALID_CREDENTIALS`: Wrong login ID or password
+- `AUTH_SESSION_EXPIRED`: Expired/revoked session token
+- `FORBIDDEN_ROLE`: Role does not have operation permission
+- `FORBIDDEN_OWNER`: Resource owner mismatch
+- `VALIDATION_ERROR`: Input validation failed
+- `ANNIVERSARY_NOT_FOUND`: Anniversary record is missing/inactive
+- `SYNC_RETRY_SCHEDULED`: Sync failed and retry was scheduled
+- `SYNC_RETRY_EXHAUSTED`: Retry budget exhausted; manual action required
+- `INTERNAL_ERROR`: Unhandled server error (check requestId in logs)

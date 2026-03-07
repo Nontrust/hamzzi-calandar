@@ -6,6 +6,7 @@ export * from "./auditLog";
 export * from "./tokenLifecycle";
 export * from "./retryOrchestration";
 export * from "./anniversaryStore";
+export * from "./authStore";
 export * from "./examIngestion";
 export * from "./calendarSync";
 export * from "./interviewReport";

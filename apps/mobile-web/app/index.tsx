@@ -1,16 +1,11 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Calendar from "expo-calendar";
 import * as ImagePicker from "expo-image-picker";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useEffect, useState } from "react";
-import { Button, SafeAreaView, Text, View } from "react-native";
-import {
-  canManageRewards,
-  getBrandLabel,
-  getRoleHelper,
-  getRoleLabel,
-  type UserRole
-} from "@nahamzzi/domain";
+import { Button, SafeAreaView, Text, TextInput, View } from "react-native";
+import { canManageRewards, getRoleHelper, getRoleLabel, type UserRole } from "@nahamzzi/domain";
+import { getAuthSession, login, logout, type AuthSession } from "../src/authClient";
 import {
   createDefaultAnniversary,
   fetchAnniversaries,
@@ -23,32 +18,66 @@ import {
 const ACTIVE_ROLE_KEY = "active-role";
 
 export default function HomeScreen() {
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginNotice, setLoginNotice] = useState("Login is required.");
   const [activeRole, setActiveRole] = useState<UserRole | null>(null);
-  const [apiNotice, setApiNotice] = useState("정상");
+  const [apiNotice, setApiNotice] = useState("OK");
   const [monthItems, setMonthItems] = useState<Array<{ kind: "exam" | "anniversary"; date: string; title: string }>>([]);
   const [anniversaryIds, setAnniversaryIds] = useState<string[]>([]);
-  const [permissionState, setPermissionState] = useState({
-    biometric: "idle",
-    calendar: "idle",
-    photo: "idle"
-  });
+  const [permissionState, setPermissionState] = useState({ biometric: "idle", calendar: "idle", photo: "idle" });
 
   useEffect(() => {
-    AsyncStorage.getItem(ACTIVE_ROLE_KEY).then((savedRole) => {
-      if (savedRole === "A" || savedRole === "B") {
-        setActiveRole(savedRole);
-      }
-    });
+    void initializeAuth();
   }, []);
 
   useEffect(() => {
-    if (!activeRole) {
+    if (!session || !activeRole) {
       setMonthItems([]);
       setAnniversaryIds([]);
       return;
     }
     void refreshFromServer(activeRole);
-  }, [activeRole]);
+  }, [session, activeRole]);
+
+  async function initializeAuth() {
+    const existing = await getAuthSession();
+    setSession(existing);
+    if (!existing) {
+      setActiveRole(null);
+      return;
+    }
+    const savedRole = await AsyncStorage.getItem(ACTIVE_ROLE_KEY);
+    if (savedRole === "A" || savedRole === "B") {
+      setActiveRole(savedRole);
+    } else {
+      setActiveRole(existing.user.defaultRole);
+      await AsyncStorage.setItem(ACTIVE_ROLE_KEY, existing.user.defaultRole);
+    }
+  }
+
+  async function onLogin() {
+    const result = await login(loginId, password);
+    if (!result.success) {
+      setLoginNotice(mapErrorToMessage(result.errorCode));
+      return;
+    }
+    setSession(result.session);
+    const role = result.session.user.defaultRole;
+    setActiveRole(role);
+    await AsyncStorage.setItem(ACTIVE_ROLE_KEY, role);
+    setLoginNotice(`Welcome, ${result.session.user.displayName}.`);
+    setPassword("");
+  }
+
+  async function onLogout() {
+    await logout();
+    await AsyncStorage.removeItem(ACTIVE_ROLE_KEY);
+    setSession(null);
+    setActiveRole(null);
+    setApiNotice("Logged out.");
+  }
 
   async function selectRole(role: UserRole) {
     await AsyncStorage.setItem(ACTIVE_ROLE_KEY, role);
@@ -59,7 +88,7 @@ export default function HomeScreen() {
     const monthRes = await fetchCalendarMonth(role, "2026-03");
     if (monthRes.success) {
       setMonthItems(monthRes.data.items);
-      setApiNotice("월 조회 성공");
+      setApiNotice("Month loaded");
     } else {
       setApiNotice(mapErrorToMessage(monthRes.errorCode));
     }
@@ -78,7 +107,7 @@ export default function HomeScreen() {
       setApiNotice(mapErrorToMessage(res.errorCode));
       return;
     }
-    setApiNotice("기념일 저장 성공");
+    setApiNotice("Anniversary created");
     if (activeRole) {
       await refreshFromServer(activeRole);
     }
@@ -87,15 +116,15 @@ export default function HomeScreen() {
   async function editFirstAnniversary() {
     const first = anniversaryIds[0];
     if (!first) {
-      setApiNotice("수정할 기념일이 없어.");
+      setApiNotice("No anniversary to edit.");
       return;
     }
-    const res = await renameAnniversary(activeRole, first, "나햄찌데이");
+    const res = await renameAnniversary(activeRole, first, "Hamzzi Day");
     if (!res.success) {
       setApiNotice(mapErrorToMessage(res.errorCode));
       return;
     }
-    setApiNotice("기념일 수정 성공");
+    setApiNotice("Anniversary updated");
     if (activeRole) {
       await refreshFromServer(activeRole);
     }
@@ -104,7 +133,7 @@ export default function HomeScreen() {
   async function deleteFirstAnniversary() {
     const first = anniversaryIds[0];
     if (!first) {
-      setApiNotice("삭제할 기념일이 없어.");
+      setApiNotice("No anniversary to delete.");
       return;
     }
     const res = await removeAnniversary(activeRole, first);
@@ -112,7 +141,7 @@ export default function HomeScreen() {
       setApiNotice(mapErrorToMessage(res.errorCode));
       return;
     }
-    setApiNotice("기념일 삭제 성공");
+    setApiNotice("Anniversary deleted");
     if (activeRole) {
       await refreshFromServer(activeRole);
     }
@@ -120,10 +149,7 @@ export default function HomeScreen() {
 
   async function requestBiometricOnDemand() {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    setPermissionState((prev) => ({
-      ...prev,
-      biometric: hasHardware ? "granted" : "unavailable"
-    }));
+    setPermissionState((prev) => ({ ...prev, biometric: hasHardware ? "granted" : "unavailable" }));
   }
 
   async function requestCalendarOnDemand() {
@@ -136,48 +162,64 @@ export default function HomeScreen() {
     setPermissionState((prev) => ({ ...prev, photo: status }));
   }
 
+  if (!session) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>
+        <Text style={{ fontSize: 22, fontWeight: "700" }}>Login</Text>
+        <TextInput
+          placeholder="Login ID"
+          value={loginId}
+          onChangeText={setLoginId}
+          autoCapitalize="none"
+          style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10 }}
+        />
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10 }}
+        />
+        <Button title="Login" onPress={() => void onLogin()} />
+        <Text>{loginNotice}</Text>
+        <Text>Demo IDs: nahamzzi / deed1515</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700" }}>햄찌의 뽀짝 하루 캘린더</Text>
-      <Text>
-        활성 멤버: {activeRole ? getRoleLabel(activeRole) : "미선택"}
-      </Text>
+      <Text style={{ fontSize: 22, fontWeight: "700" }}>Hamzzi Calendar</Text>
+      <Text>User: {session.user.displayName} ({session.user.loginId})</Text>
+      <Button title="Logout" onPress={() => void onLogout()} />
+
+      <Text>Active role: {activeRole ? getRoleLabel(activeRole) : "none"}</Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Button title={`${getRoleLabel("A")} 선택`} onPress={() => void selectRole("A")} />
-        <Button title={`${getRoleLabel("B")} 선택`} onPress={() => void selectRole("B")} />
+        <Button title={`${getRoleLabel("A")} select`} onPress={() => void selectRole("A")} />
+        <Button title={`${getRoleLabel("B")} select`} onPress={() => void selectRole("B")} />
       </View>
 
-      <Text>관리 기능 접근: {activeRole && canManageRewards(activeRole) ? "허용" : "차단"}</Text>
-      {activeRole === "A" ? (
-        <Text>{getRoleHelper("A")}</Text>
-      ) : activeRole === "B" ? (
-        <Text>{getRoleHelper("B")}</Text>
-      ) : (
-        <Text>먼저 햄찌 멤버를 골라줘.</Text>
-      )}
+      <Text>Admin features: {activeRole && canManageRewards(activeRole) ? "allowed" : "blocked"}</Text>
+      {activeRole === "A" ? <Text>{getRoleHelper("A")}</Text> : activeRole === "B" ? <Text>{getRoleHelper("B")}</Text> : <Text>Select role first.</Text>}
 
-      <Text>{getBrandLabel("study.session")} / {getBrandLabel("study.todo")} / {getBrandLabel("study.achievement")}</Text>
-      <Text>{getBrandLabel("reward.card")} 상태: 잠금 / 해금</Text>
-      <Text>서버 안내: {apiNotice}</Text>
-
-      <Text style={{ fontWeight: "700", marginTop: 8 }}>이번 달 달력 미리보기</Text>
+      <Text>Server notice: {apiNotice}</Text>
+      <Text style={{ fontWeight: "700", marginTop: 8 }}>Month preview</Text>
       {monthItems.map((item) => (
-        <View key={`${item.kind}-${item.date}-${item.title}`} style={{ gap: 2 }}>
-          <Text>
-            {item.kind === "anniversary" ? "● 기념일" : "○ 일반 일정"} {item.date} {item.title}
-          </Text>
+        <View key={`${item.kind}-${item.date}-${item.title}`}>
+          <Text>{item.kind === "anniversary" ? "Anniversary" : "Exam"} {item.date} {item.title}</Text>
         </View>
       ))}
-      <Button title="기념일 추가(서버 저장)" onPress={() => void addAnniversary()} />
-      <Button title="첫 기념일 이름 수정" onPress={() => void editFirstAnniversary()} />
-      <Button title="첫 기념일 삭제" onPress={() => void deleteFirstAnniversary()} />
 
-      <Button title="생체인증 권한 요청(필요할 때만)" onPress={() => void requestBiometricOnDemand()} />
-      <Button title="캘린더 권한 요청(필요할 때만)" onPress={() => void requestCalendarOnDemand()} />
-      <Button title="사진 권한 요청(필요할 때만)" onPress={() => void requestPhotoOnDemand()} />
-      <Text>생체인증 권한 상태: {permissionState.biometric}</Text>
-      <Text>캘린더 권한 상태: {permissionState.calendar}</Text>
-      <Text>사진 권한 상태: {permissionState.photo}</Text>
+      <Button title="Add anniversary" onPress={() => void addAnniversary()} />
+      <Button title="Edit first anniversary" onPress={() => void editFirstAnniversary()} />
+      <Button title="Delete first anniversary" onPress={() => void deleteFirstAnniversary()} />
+
+      <Button title="Request biometric permission" onPress={() => void requestBiometricOnDemand()} />
+      <Button title="Request calendar permission" onPress={() => void requestCalendarOnDemand()} />
+      <Button title="Request photo permission" onPress={() => void requestPhotoOnDemand()} />
+      <Text>Biometric permission: {permissionState.biometric}</Text>
+      <Text>Calendar permission: {permissionState.calendar}</Text>
+      <Text>Photo permission: {permissionState.photo}</Text>
     </SafeAreaView>
   );
 }
