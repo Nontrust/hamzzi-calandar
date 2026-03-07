@@ -13,3 +13,9 @@ coverage/
 # Legacy OpenSpec paths (use openspec/specs and openspec/changes)
 openspec/spec/
 openspec/tasks/
+
+# Temporary safety excludes before first remote push
+infra/
+docs/
+openspec/statics/
+docker-compose.local.yml
