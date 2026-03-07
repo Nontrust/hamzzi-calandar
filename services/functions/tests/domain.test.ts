@@ -5,8 +5,18 @@ import { validateInterviewReport } from "../src/interviewReport";
 import { runCalendarSyncJob } from "../src/calendarSyncJob";
 import { runInterviewSessionCompletion } from "../src/interviewJob";
 import { clearAuditEvents, listAuditEvents } from "../src/auditLog";
-import { handleCalendarSync, handleExamIngestionSync, handleInterviewCompletion } from "../src/handlers";
+import {
+  handleCalendarMonthView,
+  handleCalendarSync,
+  handleCreateAnniversary,
+  handleDeleteAnniversary,
+  handleExamIngestionSync,
+  handleInterviewCompletion,
+  handleListAnniversaries,
+  handleUpdateAnniversary
+} from "../src/handlers";
 import { finalizeRetrySuccess, nextBackoffDelayMs, planRetryAfterFailure } from "../src/retryOrchestration";
+import { clearAnniversaryStore } from "../src/anniversaryStore";
 import {
   clearTokenStore,
   decryptToken,
@@ -205,5 +215,70 @@ describe("integration domain behavior", () => {
 
     const done = finalizeRetrySuccess();
     expect(done.state).toBe("synced");
+  });
+
+  it("supports anniversary CRUD with owner checks", async () => {
+    clearAnniversaryStore();
+    const actorA = { userId: "user-a", role: "A" as const };
+    const actorB = { userId: "user-b", role: "B" as const };
+
+    const created = await handleCreateAnniversary(actorA, {
+      name: "사귄날",
+      baseDate: "2024-03-23",
+      ruleType: "yearly",
+      ruleValue: 1
+    });
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const listed = await handleListAnniversaries(actorA);
+    expect(listed.success).toBe(true);
+    if (!listed.success) return;
+    expect(listed.data.length).toBe(1);
+
+    const updated = await handleUpdateAnniversary(actorA, created.data.id, { name: "나햄찌데이" });
+    expect(updated.success).toBe(true);
+
+    const forbidden = await handleUpdateAnniversary(actorB, created.data.id, { name: "침입수정" });
+    expect(forbidden.success).toBe(false);
+    if (!forbidden.success) {
+      expect(forbidden.errorCode).toBe("FORBIDDEN_OWNER");
+    }
+
+    const removed = await handleDeleteAnniversary(actorA, created.data.id);
+    expect(removed.success).toBe(true);
+  });
+
+  it("returns validation error for invalid anniversary payload", async () => {
+    clearAnniversaryStore();
+    const actorA = { userId: "user-a", role: "A" as const };
+    const bad = await handleCreateAnniversary(actorA, {
+      name: "",
+      baseDate: "2024/03/23",
+      ruleType: "yearly",
+      ruleValue: 0
+    } as never);
+    expect(bad.success).toBe(false);
+    if (!bad.success) {
+      expect(bad.errorCode).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("merges exam and anniversary items in month view with sorted order", async () => {
+    clearAnniversaryStore();
+    const actorA = { userId: "user-a", role: "A" as const };
+    await handleCreateAnniversary(actorA, {
+      name: "사귄날",
+      baseDate: "2024-03-23",
+      ruleType: "yearly",
+      ruleValue: 1
+    });
+    const month = await handleCalendarMonthView(actorA, "2026-03");
+    expect(month.success).toBe(true);
+    if (!month.success) return;
+    expect(month.data.items.some((item) => item.kind === "exam")).toBe(true);
+    expect(month.data.items.some((item) => item.kind === "anniversary")).toBe(true);
+    const sorted = [...month.data.items].sort((a, b) => a.date.localeCompare(b.date));
+    expect(month.data.items.map((item) => item.date)).toEqual(sorted.map((item) => item.date));
   });
 });
