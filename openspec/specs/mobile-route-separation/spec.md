@@ -1,0 +1,34 @@
+# mobile-route-separation Specification
+
+## Purpose
+TBD - created by archiving change split-mobile-pages-routing. Update Purpose after archive.
+## Requirements
+### Requirement: 인증 상태 기반 진입 경로 분리
+시스템은 인증 상태에 따라 로그인 페이지와 홈 페이지의 진입 경로를 분리해야 한다. (MUST)
+
+#### Scenario: 미인증 사용자 진입
+- **WHEN** 세션이 없는 사용자가 앱에 진입한다
+- **THEN** 시스템은 로그인 페이지로 이동시켜야 한다
+
+#### Scenario: 인증 사용자 진입
+- **WHEN** 유효 세션이 있는 사용자가 앱에 진입한다
+- **THEN** 시스템은 홈 페이지를 기본 진입 화면으로 제공해야 한다
+
+### Requirement: 로그인/로그아웃 라우팅 전환
+시스템은 로그인 성공 및 로그아웃 시 라우트를 즉시 전환해 접근 정책을 유지해야 한다. (MUST)
+
+#### Scenario: 로그인 성공 후 전환
+- **WHEN** 사용자가 로그인에 성공한다
+- **THEN** 시스템은 홈 페이지로 전환해야 한다
+
+#### Scenario: 로그아웃 후 전환
+- **WHEN** 사용자가 로그아웃한다
+- **THEN** 시스템은 로그인 페이지로 전환해야 한다
+
+### Requirement: 인증 로딩 중 안전한 화면 처리
+시스템은 인증 초기화가 완료되기 전까지 화면 깜빡임이나 잘못된 화면 노출을 방지해야 한다. (MUST)
+
+#### Scenario: 앱 시작 시 세션 확인 중
+- **WHEN** 앱이 시작되어 세션 조회가 진행 중이다
+- **THEN** 시스템은 인증 결과 확정 전까지 보호된 홈 콘텐츠를 노출하지 않아야 한다
+
