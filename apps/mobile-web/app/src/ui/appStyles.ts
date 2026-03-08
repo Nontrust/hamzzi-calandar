@@ -390,6 +390,115 @@ export const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     fontSize: theme.typography.caption
   },
+  calendarHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: theme.spacing.sm
+  },
+  calendarMonthRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  calendarMonthButton: {
+    borderWidth: 1,
+    borderColor: "#dbe4ef",
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  calendarMonthButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#334155"
+  },
+  calendarMonthTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f172a"
+  },
+  calendarWeekRow: {
+    flexDirection: "row"
+  },
+  calendarWeekLabel: {
+    flex: 1,
+    textAlign: "center",
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  calendarGrid: {
+    gap: 6
+  },
+  calendarGridRow: {
+    flexDirection: "row",
+    gap: 6
+  },
+  calendarCell: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  calendarCellBlank: {
+    backgroundColor: "transparent",
+    borderColor: "transparent"
+  },
+  calendarCellActive: {
+    backgroundColor: "#eef2ff",
+    borderColor: "#c7d2fe"
+  },
+  calendarCellToday: {
+    borderColor: "#0f172a",
+    borderWidth: 2
+  },
+  calendarCellSelected: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#60a5fa"
+  },
+  calendarDayText: {
+    color: "#334155",
+    fontWeight: "700"
+  },
+  calendarDayTextActive: {
+    color: "#3730a3"
+  },
+  calendarDayTextToday: {
+    color: "#0f172a",
+    fontWeight: "900"
+  },
+  calendarDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 4,
+    backgroundColor: "#4f46e5"
+  },
+  summaryColumns: {
+    gap: theme.spacing.sm
+  },
+  summaryColumn: {
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    borderRadius: theme.radius.md,
+    padding: 10,
+    gap: 6
+  },
+  summaryTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.text
+  },
+  summaryItem: {
+    color: "#334155",
+    fontSize: 13
+  },
   emptyText: {
     color: "#94a3b8"
   },
