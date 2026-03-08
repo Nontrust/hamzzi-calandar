@@ -5,6 +5,7 @@ node_modules/
 dist/
 coverage/
 .DS_Store
+.idea/
 
 # Local temporary logs
 .tmp_*.log
