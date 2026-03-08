@@ -234,7 +234,8 @@ describe("integration domain behavior", () => {
     const listed = await handleListAnniversaries(actorA);
     expect(listed.success).toBe(true);
     if (!listed.success) return;
-    expect(listed.data.length).toBe(1);
+    expect(listed.data.length).toBeGreaterThanOrEqual(1);
+    expect(listed.data.some((item) => item.id === created.data.id)).toBe(true);
 
     const updated = await handleUpdateAnniversary(actorA, created.data.id, { name: "나햄찌데이" });
     expect(updated.success).toBe(true);

@@ -1,3 +1,4 @@
+import { Pool } from "pg";
 import { z } from "zod";
 
 export type AnniversaryRuleType = "day_offset" | "monthly" | "yearly";
@@ -48,7 +49,22 @@ export class AnniversaryError extends Error {
   }
 }
 
-const store = new Map<string, AnniversaryRecord>();
+type AnniversaryRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  base_date: string;
+  rule_type: AnniversaryRuleType;
+  rule_value: number;
+  is_active: boolean;
+  created_at: string | Date;
+  updated_at: string | Date;
+};
+
+const memoryStore = new Map<string, AnniversaryRecord>();
+const seededUsers = new Set<string>();
+const pgConnectionString = process.env.PG_CONNECTION_STRING ?? process.env.DATABASE_URL ?? "";
+let pgPool: Pool | null = null;
 
 function makeId(): string {
   const t = Date.now().toString(36);
@@ -69,20 +85,122 @@ function formatAnniversaryTitle(name: string, baseDate: string, targetDate: stri
 
 function toMonthPrefix(month: string): string {
   if (!/^\d{4}-\d{2}$/.test(month)) {
-    throw new AnniversaryError("VALIDATION_ERROR", "month는 YYYY-MM 형식이어야 합니다.");
+    throw new AnniversaryError("VALIDATION_ERROR", "month must use YYYY-MM format.");
   }
   return month;
 }
 
-export function clearAnniversaryStore(): void {
-  store.clear();
+function hasPg(): boolean {
+  return pgConnectionString.trim().length > 0;
 }
 
-export function createAnniversary(userId: string, input: CreateAnniversaryInput, now = new Date()): AnniversaryRecord {
+function getPgPool(): Pool {
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: pgConnectionString
+    });
+  }
+  return pgPool;
+}
+
+function toIsoString(value: string | Date): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function toRecord(row: AnniversaryRow): AnniversaryRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    baseDate: row.base_date,
+    ruleType: row.rule_type,
+    ruleValue: row.rule_value,
+    isActive: row.is_active,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at)
+  };
+}
+
+export function clearAnniversaryStore(): void {
+  memoryStore.clear();
+  seededUsers.clear();
+}
+
+async function seedDefaultAnniversariesForUser(userId: string, now = new Date()): Promise<void> {
+  if (seededUsers.has(userId)) return;
+
+  const defaults: Array<Pick<AnniversaryRecord, "name" | "baseDate" | "ruleType" | "ruleValue">> = [
+    { name: "햄찌 생일", baseDate: "2024-01-08", ruleType: "yearly", ruleValue: 1 },
+    { name: "기념일", baseDate: "2024-03-23", ruleType: "yearly", ruleValue: 1 },
+    { name: "내 생일", baseDate: "2024-08-04", ruleType: "yearly", ruleValue: 1 }
+  ];
+
+  if (hasPg()) {
+    const pool = getPgPool();
+    for (const item of defaults) {
+      await pool.query(
+        `
+          insert into public.anniversaries (user_id, name, base_date, rule_type, rule_value, is_active, created_at, updated_at)
+          select $1, $2, $3::date, $4, $5, true, $6::timestamptz, $6::timestamptz
+          where not exists (
+            select 1
+            from public.anniversaries
+            where user_id = $1 and name = $2 and base_date = $3::date and is_active = true
+          )
+        `,
+        [userId, item.name, item.baseDate, item.ruleType, item.ruleValue, now.toISOString()]
+      );
+    }
+    seededUsers.add(userId);
+    return;
+  }
+
+  for (const item of defaults) {
+    const exists = [...memoryStore.values()].some(
+      (record) => record.userId === userId && record.name === item.name && record.baseDate === item.baseDate && record.isActive
+    );
+    if (exists) continue;
+    await createAnniversary(userId, item, now);
+  }
+  seededUsers.add(userId);
+}
+
+export async function createAnniversary(userId: string, input: CreateAnniversaryInput, now = new Date()): Promise<AnniversaryRecord> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
-    throw new AnniversaryError("VALIDATION_ERROR", "기념일 입력값이 올바르지 않습니다.");
+    throw new AnniversaryError("VALIDATION_ERROR", "Anniversary input is invalid.");
   }
+
+  if (hasPg()) {
+    const pool = getPgPool();
+    const result = await pool.query<AnniversaryRow>(
+      `
+        insert into public.anniversaries (user_id, name, base_date, rule_type, rule_value, is_active, created_at, updated_at)
+        values ($1, $2, $3::date, $4, $5, $6, $7::timestamptz, $7::timestamptz)
+        returning
+          id,
+          user_id,
+          name,
+          to_char(base_date, 'YYYY-MM-DD') as base_date,
+          rule_type,
+          rule_value,
+          is_active,
+          created_at,
+          updated_at
+      `,
+      [
+        userId,
+        parsed.data.name,
+        parsed.data.baseDate,
+        parsed.data.ruleType,
+        parsed.data.ruleValue,
+        parsed.data.isActive ?? true,
+        now.toISOString()
+      ]
+    );
+    return toRecord(result.rows[0]);
+  }
+
   const record: AnniversaryRecord = {
     id: makeId(),
     userId,
@@ -94,56 +212,166 @@ export function createAnniversary(userId: string, input: CreateAnniversaryInput,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()
   };
-  store.set(record.id, record);
+  memoryStore.set(record.id, record);
   return record;
 }
 
-export function listAnniversaries(userId: string): AnniversaryRecord[] {
-  return [...store.values()]
+export async function listAnniversaries(userId: string): Promise<AnniversaryRecord[]> {
+  await seedDefaultAnniversariesForUser(userId);
+
+  if (hasPg()) {
+    const pool = getPgPool();
+    const result = await pool.query<AnniversaryRow>(
+      `
+        select
+          id,
+          user_id,
+          name,
+          to_char(base_date, 'YYYY-MM-DD') as base_date,
+          rule_type,
+          rule_value,
+          is_active,
+          created_at,
+          updated_at
+        from public.anniversaries
+        where user_id = $1 and is_active = true
+        order by base_date asc, name asc
+      `,
+      [userId]
+    );
+    return result.rows.map(toRecord);
+  }
+
+  return [...memoryStore.values()]
     .filter((item) => item.userId === userId && item.isActive)
     .sort((a, b) => a.baseDate.localeCompare(b.baseDate));
 }
 
-export function updateAnniversary(
+export async function updateAnniversary(
   userId: string,
   anniversaryId: string,
   input: UpdateAnniversaryInput,
   now = new Date()
-): AnniversaryRecord {
+): Promise<AnniversaryRecord> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
-    throw new AnniversaryError("VALIDATION_ERROR", "기념일 수정값이 올바르지 않습니다.");
+    throw new AnniversaryError("VALIDATION_ERROR", "Anniversary update input is invalid.");
   }
-  const found = store.get(anniversaryId);
+
+  if (hasPg()) {
+    const pool = getPgPool();
+    const foundResult = await pool.query<{ user_id: string; is_active: boolean }>(
+      "select user_id, is_active from public.anniversaries where id = $1",
+      [anniversaryId]
+    );
+    const found = foundResult.rows[0];
+    if (!found || !found.is_active) {
+      throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "Anniversary not found.");
+    }
+    if (found.user_id !== userId) {
+      throw new AnniversaryError("FORBIDDEN_OWNER", "Only owner can update this anniversary.");
+    }
+
+    const result = await pool.query<AnniversaryRow>(
+      `
+        update public.anniversaries
+        set
+          name = coalesce($2, name),
+          base_date = coalesce($3::date, base_date),
+          rule_type = coalesce($4, rule_type),
+          rule_value = coalesce($5, rule_value),
+          is_active = coalesce($6, is_active),
+          updated_at = $7::timestamptz
+        where id = $1
+        returning
+          id,
+          user_id,
+          name,
+          to_char(base_date, 'YYYY-MM-DD') as base_date,
+          rule_type,
+          rule_value,
+          is_active,
+          created_at,
+          updated_at
+      `,
+      [
+        anniversaryId,
+        parsed.data.name ?? null,
+        parsed.data.baseDate ?? null,
+        parsed.data.ruleType ?? null,
+        parsed.data.ruleValue ?? null,
+        parsed.data.isActive ?? null,
+        now.toISOString()
+      ]
+    );
+    return toRecord(result.rows[0]);
+  }
+
+  const found = memoryStore.get(anniversaryId);
   if (!found || !found.isActive) {
-    throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "기념일을 찾을 수 없습니다.");
+    throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "Anniversary not found.");
   }
   if (found.userId !== userId) {
-    throw new AnniversaryError("FORBIDDEN_OWNER", "본인 기념일만 수정할 수 있습니다.");
+    throw new AnniversaryError("FORBIDDEN_OWNER", "Only owner can update this anniversary.");
   }
   const next: AnniversaryRecord = {
     ...found,
     ...parsed.data,
     updatedAt: now.toISOString()
   };
-  store.set(next.id, next);
+  memoryStore.set(next.id, next);
   return next;
 }
 
-export function deleteAnniversary(userId: string, anniversaryId: string, now = new Date()): AnniversaryRecord {
-  const found = store.get(anniversaryId);
+export async function deleteAnniversary(userId: string, anniversaryId: string, now = new Date()): Promise<AnniversaryRecord> {
+  if (hasPg()) {
+    const pool = getPgPool();
+    const foundResult = await pool.query<{ user_id: string; is_active: boolean }>(
+      "select user_id, is_active from public.anniversaries where id = $1",
+      [anniversaryId]
+    );
+    const found = foundResult.rows[0];
+    if (!found || !found.is_active) {
+      throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "Anniversary not found.");
+    }
+    if (found.user_id !== userId) {
+      throw new AnniversaryError("FORBIDDEN_OWNER", "Only owner can delete this anniversary.");
+    }
+
+    const result = await pool.query<AnniversaryRow>(
+      `
+        update public.anniversaries
+        set is_active = false, updated_at = $2::timestamptz
+        where id = $1
+        returning
+          id,
+          user_id,
+          name,
+          to_char(base_date, 'YYYY-MM-DD') as base_date,
+          rule_type,
+          rule_value,
+          is_active,
+          created_at,
+          updated_at
+      `,
+      [anniversaryId, now.toISOString()]
+    );
+    return toRecord(result.rows[0]);
+  }
+
+  const found = memoryStore.get(anniversaryId);
   if (!found || !found.isActive) {
-    throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "기념일을 찾을 수 없습니다.");
+    throw new AnniversaryError("ANNIVERSARY_NOT_FOUND", "Anniversary not found.");
   }
   if (found.userId !== userId) {
-    throw new AnniversaryError("FORBIDDEN_OWNER", "본인 기념일만 삭제할 수 있습니다.");
+    throw new AnniversaryError("FORBIDDEN_OWNER", "Only owner can delete this anniversary.");
   }
   const next: AnniversaryRecord = {
     ...found,
     isActive: false,
     updatedAt: now.toISOString()
   };
-  store.set(next.id, next);
+  memoryStore.set(next.id, next);
   return next;
 }
 
@@ -179,9 +407,9 @@ function dayOffsetProjection(record: AnniversaryRecord, monthPrefix: string): st
   return date.startsWith(`${monthPrefix}-`) ? [date] : [];
 }
 
-export function buildAnniversaryMonthItems(userId: string, month: string): CalendarMonthItem[] {
+export async function buildAnniversaryMonthItems(userId: string, month: string): Promise<CalendarMonthItem[]> {
   const monthPrefix = toMonthPrefix(month);
-  const records = listAnniversaries(userId);
+  const records = await listAnniversaries(userId);
   const items: CalendarMonthItem[] = [];
 
   for (const record of records) {

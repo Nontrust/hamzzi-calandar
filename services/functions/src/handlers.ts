@@ -236,11 +236,11 @@ export async function handleInterviewCompletion(actor: RequestActor | null = nul
 export async function handleCreateAnniversary(
   actor: RequestActor | null,
   input: CreateAnniversaryInput
-): Promise<ApiResponse<ReturnType<typeof createAnniversary>>> {
+): Promise<ApiResponse<Awaited<ReturnType<typeof createAnniversary>>>> {
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
-    const data = createAnniversary(authed.userId, input, ctx.now);
+    const data = await createAnniversary(authed.userId, input, ctx.now);
     recordAuditEvent({
       requestId: ctx.requestId,
       userId: authed.userId,
@@ -264,11 +264,13 @@ export async function handleCreateAnniversary(
   }
 }
 
-export async function handleListAnniversaries(actor: RequestActor | null): Promise<ApiResponse<ReturnType<typeof listAnniversaries>>> {
+export async function handleListAnniversaries(
+  actor: RequestActor | null
+): Promise<ApiResponse<Awaited<ReturnType<typeof listAnniversaries>>>> {
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
-    const data = listAnniversaries(authed.userId);
+    const data = await listAnniversaries(authed.userId);
     recordAuditEvent({
       requestId: ctx.requestId,
       userId: authed.userId,
@@ -287,11 +289,11 @@ export async function handleUpdateAnniversary(
   actor: RequestActor | null,
   anniversaryId: string,
   input: UpdateAnniversaryInput
-): Promise<ApiResponse<ReturnType<typeof updateAnniversary>>> {
+): Promise<ApiResponse<Awaited<ReturnType<typeof updateAnniversary>>>> {
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
-    const data = updateAnniversary(authed.userId, anniversaryId, input, ctx.now);
+    const data = await updateAnniversary(authed.userId, anniversaryId, input, ctx.now);
     recordAuditEvent({
       requestId: ctx.requestId,
       userId: authed.userId,
@@ -318,11 +320,11 @@ export async function handleUpdateAnniversary(
 export async function handleDeleteAnniversary(
   actor: RequestActor | null,
   anniversaryId: string
-): Promise<ApiResponse<ReturnType<typeof deleteAnniversary>>> {
+): Promise<ApiResponse<Awaited<ReturnType<typeof deleteAnniversary>>>> {
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
-    const data = deleteAnniversary(authed.userId, anniversaryId, ctx.now);
+    const data = await deleteAnniversary(authed.userId, anniversaryId, ctx.now);
     recordAuditEvent({
       requestId: ctx.requestId,
       userId: authed.userId,
@@ -354,7 +356,7 @@ export async function handleCalendarMonthView(
   try {
     const authed = requireAuthenticated(actor);
     const examItems = [{ kind: "exam" as const, date: `${month}-12`, title: "Exam schedule placeholder" }];
-    const anniversaryItems = buildAnniversaryMonthItems(authed.userId, month);
+    const anniversaryItems = await buildAnniversaryMonthItems(authed.userId, month);
     const items = [...examItems, ...anniversaryItems].sort((a, b) => a.date.localeCompare(b.date));
     recordAuditEvent({
       requestId: ctx.requestId,

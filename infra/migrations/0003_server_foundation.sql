@@ -37,11 +37,14 @@ for each row execute function public.touch_updated_at();
 alter table public.external_oauth_tokens enable row level security;
 alter table public.audit_events enable row level security;
 
-create policy if not exists "oauth-token-own-read" on public.external_oauth_tokens
-for select using (auth.uid() = user_id);
+drop policy if exists "oauth-token-own-read" on public.external_oauth_tokens;
+create policy "oauth-token-own-read" on public.external_oauth_tokens
+for select using (auth.uid()::text = user_id::text);
 
-create policy if not exists "oauth-token-own-write" on public.external_oauth_tokens
-for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "oauth-token-own-write" on public.external_oauth_tokens;
+create policy "oauth-token-own-write" on public.external_oauth_tokens
+for all using (auth.uid()::text = user_id::text) with check (auth.uid()::text = user_id::text);
 
-create policy if not exists "audit-events-own-read" on public.audit_events
-for select using (auth.uid() = user_id);
+drop policy if exists "audit-events-own-read" on public.audit_events;
+create policy "audit-events-own-read" on public.audit_events
+for select using (auth.uid()::text = user_id::text);

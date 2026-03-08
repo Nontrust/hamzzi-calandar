@@ -1,8 +1,9 @@
 # Operations Runbook
 
 ## Initial Defaults
-- Runtime: TypeScript + Expo + Supabase-compatible Postgres
+- Runtime: TypeScript + Expo + PostgreSQL (pg)
 - Mobile API base URL: `EXPO_PUBLIC_API_BASE_URL` (required for server-first anniversary/calendar calls)
+- PostgreSQL connection: `PG_CONNECTION_STRING` (used by server CRUD)
 - Sync schedule: `07:00`, `13:00`, `19:00` (server time)
 - Token encryption: `NAHAMZZI_TOKEN_ENCRYPTION_KEY` must be set as a 32-byte key (hex/base64)
 - Calendar sync transitions:
@@ -16,6 +17,7 @@
    - `infra/migrations/0003_server_foundation.sql`
    - `infra/migrations/0004_anniversaries.sql`
    - `infra/migrations/0005_auth_sessions.sql`
+   - `infra/migrations/0006_anniversaries_pg_alignment.sql`
 2. Verify required tables/indexes exist:
    - `users`, `sessions`, `anniversaries`
 

@@ -40,14 +40,14 @@ services:
     command: >
       set -e;
       for f in /bootstrap/*.sql; do
-        [ -e "$f" ] || continue;
-        echo "Applying $f";
-        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$f";
+        [ -e "$$f" ] || continue;
+        echo "Applying $$f";
+        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$$f";
       done;
       for f in /migrations/*.sql; do
-        [ -e "$f" ] || continue;
-        echo "Applying $f";
-        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$f";
+        [ -e "$$f" ] || continue;
+        echo "Applying $$f";
+        psql -h postgres -U nahamzzi -d nahamzzi -v ON_ERROR_STOP=1 -f "$$f";
       done;
       echo "Migrations complete";
 

@@ -10,6 +10,8 @@
   "dependencies": {
     "@nahamzzi/config": "0.1.0",
     "@nahamzzi/domain": "0.1.0",
+    "@types/pg": "^8.18.0",
+    "pg": "^8.20.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -17,4 +19,3 @@
     "vitest": "^3.0.0"
   }
 }
-
