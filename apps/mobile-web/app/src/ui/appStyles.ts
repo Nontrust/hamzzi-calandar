@@ -9,6 +9,142 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bg
   },
+  shellRoot: {
+    flex: 1,
+    backgroundColor: "#eef2f8"
+  },
+  shellContainer: {
+    flex: 1,
+    flexDirection: "row"
+  },
+  shellSidebar: {
+    width: 220,
+    borderRightWidth: 1,
+    borderRightColor: "#dbe3ef",
+    backgroundColor: "#f7f9fc",
+    padding: 18,
+    gap: 16
+  },
+  shellBrand: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0f172a"
+  },
+  shellBrandSub: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600"
+  },
+  shellNavSection: {
+    gap: 8
+  },
+  shellNavItem: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#eef3fa"
+  },
+  shellNavItemActive: {
+    backgroundColor: "#111827"
+  },
+  shellNavText: {
+    color: "#334155",
+    fontWeight: "700"
+  },
+  shellNavTextActive: {
+    color: "#f8fafc"
+  },
+  shellMain: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12
+  },
+  shellHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#dbe3ef",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12
+  },
+  shellHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  shellHeaderTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#111827"
+  },
+  shellHeaderSub: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#64748b"
+  },
+  shellUserBadge: {
+    alignItems: "flex-end",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10
+  },
+  shellUserName: {
+    fontWeight: "800",
+    color: "#0f172a"
+  },
+  shellUserId: {
+    fontSize: 12,
+    color: "#64748b"
+  },
+  shellContent: {
+    flex: 1
+  },
+  mobileMenuButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eef2ff",
+    borderWidth: 1,
+    borderColor: "#dbe4ff"
+  },
+  mobileMenuButtonText: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1f2937",
+    marginTop: -1
+  },
+  mobileDrawerOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.2)",
+    zIndex: 20
+  },
+  mobileDrawerPanel: {
+    width: 240,
+    height: "100%",
+    backgroundColor: "#f7f9fc",
+    borderRightWidth: 1,
+    borderRightColor: "#dbe3ef",
+    padding: 18,
+    gap: 16
+  },
+  pageScroll: {
+    flex: 1
+  },
+  pageContent: {
+    paddingBottom: 24,
+    gap: 14
+  },
   scrollContent: {
     padding: theme.spacing.lg,
     gap: 14

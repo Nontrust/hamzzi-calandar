@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, SafeAreaView, ScrollView, StatusBar, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { canManageRewards, getRoleHelper, getRoleLabel, type UserRole } from "@nahamzzi/domain";
 import { logout } from "../../src/authClient";
 import {
@@ -20,7 +20,6 @@ import { AppButton } from "../src/ui/AppButton";
 import { styles } from "../src/ui/appStyles";
 
 const ACTIVE_ROLE_KEY = "active-role";
-const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
 type MonthItem = { kind: "exam" | "anniversary"; date: string; title: string };
 
@@ -202,103 +201,88 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.headerCard}>
-          <View style={styles.flex1}>
-            <Text style={styles.headerTitle}>{session.user.displayName}</Text>
-            <Text style={styles.headerSub}>{session.user.loginId}</Text>
-          </View>
-          <View style={styles.emblemBadge}>
-            <View style={styles.emblemGlowPrimary} />
-            <View style={styles.emblemGlowSecondary} />
-            <Image source={BRAND_MARK} style={styles.logoSmall} resizeMode="contain" accessible={false} />
-          </View>
-        </View>
-
-        <View style={styles.roleRow}>
-          <Pressable
-            onPress={() => void selectRole("A")}
-            style={[styles.roleChip, activeRole === "A" && styles.roleChipActive]}
-          >
-            <Text style={[styles.roleChipText, activeRole === "A" && styles.roleChipTextActive]}>
-              {getRoleLabel("A")}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => void selectRole("B")}
-            style={[styles.roleChip, activeRole === "B" && styles.roleChipActive]}
-          >
-            <Text style={[styles.roleChipText, activeRole === "B" && styles.roleChipTextActive]}>
-              {getRoleLabel("B")}
-            </Text>
-          </Pressable>
-          <AppButton label="로그아웃" onPress={() => void onLogout()} variant="secondary" />
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>역할 안내</Text>
-          <Text style={styles.infoBody}>{activeRole ? getRoleHelper(activeRole) : "역할을 선택해 주세요."}</Text>
-          <Text style={styles.infoMeta}>
-            보상 관리 권한: {activeRole && canManageRewards(activeRole) ? "허용" : "제한"}
+    <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent}>
+      <View style={styles.roleRow}>
+        <Pressable
+          onPress={() => void selectRole("A")}
+          style={[styles.roleChip, activeRole === "A" && styles.roleChipActive]}
+        >
+          <Text style={[styles.roleChipText, activeRole === "A" && styles.roleChipTextActive]}>
+            {getRoleLabel("A")}
           </Text>
-        </View>
+        </Pressable>
+        <Pressable
+          onPress={() => void selectRole("B")}
+          style={[styles.roleChip, activeRole === "B" && styles.roleChipActive]}
+        >
+          <Text style={[styles.roleChipText, activeRole === "B" && styles.roleChipTextActive]}>
+            {getRoleLabel("B")}
+          </Text>
+        </Pressable>
+        <AppButton label="로그아웃" onPress={() => void onLogout()} variant="secondary" />
+      </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>전체 항목</Text>
-            <Text style={styles.statValue}>{monthSummary.total}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>시험</Text>
-            <Text style={styles.statValue}>{monthSummary.exams}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>기념일</Text>
-            <Text style={styles.statValue}>{monthSummary.anniversaries}</Text>
-          </View>
-        </View>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>역할 안내</Text>
+        <Text style={styles.infoBody}>{activeRole ? getRoleHelper(activeRole) : "역할을 선택해 주세요."}</Text>
+        <Text style={styles.infoMeta}>
+          보상 관리 권한: {activeRole && canManageRewards(activeRole) ? "허용" : "제한"}
+        </Text>
+      </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>3월 타임라인</Text>
-          <Text style={styles.sectionSub}>{apiNotice}</Text>
-          {monthItems.length === 0 ? (
-            <Text style={styles.emptyText}>아직 등록된 일정이 없습니다.</Text>
-          ) : (
-            monthItems.map((item) => (
-              <View key={`${item.kind}-${item.date}-${item.title}`} style={styles.eventRow}>
-                <View style={[styles.eventDot, item.kind === "anniversary" ? styles.dotAnniversary : styles.dotExam]} />
-                <View style={styles.flex1}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventMeta}>{item.date} · {getItemKindLabel(item.kind)}</Text>
-                </View>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>전체 항목</Text>
+          <Text style={styles.statValue}>{monthSummary.total}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>시험</Text>
+          <Text style={styles.statValue}>{monthSummary.exams}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>기념일</Text>
+          <Text style={styles.statValue}>{monthSummary.anniversaries}</Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>3월 타임라인</Text>
+        <Text style={styles.sectionSub}>{apiNotice}</Text>
+        {monthItems.length === 0 ? (
+          <Text style={styles.emptyText}>아직 등록된 일정이 없습니다.</Text>
+        ) : (
+          monthItems.map((item) => (
+            <View key={`${item.kind}-${item.date}-${item.title}`} style={styles.eventRow}>
+              <View style={[styles.eventDot, item.kind === "anniversary" ? styles.dotAnniversary : styles.dotExam]} />
+              <View style={styles.flex1}>
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventMeta}>{item.date} · {getItemKindLabel(item.kind)}</Text>
               </View>
-            ))
-          )}
-        </View>
+            </View>
+          ))
+        )}
+      </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>빠른 실행</Text>
-          <View style={styles.actionsWrap}>
-            <AppButton label="기념일 추가" onPress={() => void addAnniversary()} />
-            <AppButton label="첫 항목 수정" onPress={() => void editFirstAnniversary()} variant="secondary" />
-            <AppButton label="첫 항목 삭제" onPress={() => void deleteFirstAnniversary()} variant="danger" />
-          </View>
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>빠른 실행</Text>
+        <View style={styles.actionsWrap}>
+          <AppButton label="기념일 추가" onPress={() => void addAnniversary()} />
+          <AppButton label="첫 항목 수정" onPress={() => void editFirstAnniversary()} variant="secondary" />
+          <AppButton label="첫 항목 삭제" onPress={() => void deleteFirstAnniversary()} variant="danger" />
         </View>
+      </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>권한 관리</Text>
-          <View style={styles.actionsWrap}>
-            <AppButton label="생체 인증" onPress={() => void requestBiometricOnDemand()} variant="secondary" />
-            <AppButton label="캘린더" onPress={() => void requestCalendarOnDemand()} variant="secondary" />
-            <AppButton label="사진 라이브러리" onPress={() => void requestPhotoOnDemand()} variant="secondary" />
-          </View>
-          <Text style={styles.permissionText}>생체 인증: {getPermissionLabel(permissionState.biometric)}</Text>
-          <Text style={styles.permissionText}>캘린더: {getPermissionLabel(permissionState.calendar)}</Text>
-          <Text style={styles.permissionText}>사진: {getPermissionLabel(permissionState.photo)}</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>권한 관리</Text>
+        <View style={styles.actionsWrap}>
+          <AppButton label="생체 인증" onPress={() => void requestBiometricOnDemand()} variant="secondary" />
+          <AppButton label="캘린더" onPress={() => void requestCalendarOnDemand()} variant="secondary" />
+          <AppButton label="사진 라이브러리" onPress={() => void requestPhotoOnDemand()} variant="secondary" />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Text style={styles.permissionText}>생체 인증: {getPermissionLabel(permissionState.biometric)}</Text>
+        <Text style={styles.permissionText}>캘린더: {getPermissionLabel(permissionState.calendar)}</Text>
+        <Text style={styles.permissionText}>사진: {getPermissionLabel(permissionState.photo)}</Text>
+      </View>
+    </ScrollView>
   );
 }
