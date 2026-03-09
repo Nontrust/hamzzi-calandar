@@ -42,3 +42,24 @@ TBD - created by archiving change revamp-mobile-ui-shell. Update Purpose after a
 - **WHEN** 사용자가 로그인 후 홈 페이지에 도착한다
 - **THEN** 시스템은 기존 핵심 카드 섹션과 주요 액션을 동일한 수준으로 제공해야 한다
 
+### Requirement: App shell hero context must be consistent
+The system MUST render a top hero description block on home, anniversaries, schedule, and settings pages.
+
+#### Scenario: Page hero is shown
+- **WHEN** a user opens one of the four main pages
+- **THEN** the system shows a page-specific hero title and summary text at the top
+
+### Requirement: Account popup must expose user context and action
+The system MUST show user name, login id, role label, and logout action when the account badge is clicked.
+
+#### Scenario: Account popup opens
+- **WHEN** a user clicks the account badge in the header
+- **THEN** the system displays a popup with name, login id, role label, and a logout button
+
+### Requirement: Account popup layering must stay above content
+The system MUST keep the account popup visible above page content cards.
+
+#### Scenario: Popup overlaps content
+- **WHEN** the popup is open while content cards are rendered below
+- **THEN** the popup remains visually above the content
+
