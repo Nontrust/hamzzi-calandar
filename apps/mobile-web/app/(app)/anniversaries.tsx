@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, ScrollView, Text, View } from "react-native";
 import {
   createDefaultAnniversary,
   fetchAnniversaries,
@@ -10,6 +10,8 @@ import {
 import { useActiveRole } from "../src/auth/useActiveRole";
 import { AppButton } from "../src/ui/AppButton";
 import { styles } from "../src/ui/appStyles";
+
+const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
 type AnniversaryRecord = {
   id: string;
@@ -89,6 +91,22 @@ export default function AnniversariesPage() {
 
   return (
     <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent}>
+      <View style={styles.homeHero} nativeID="home-hero-anniversaries" testID="home-hero-anniversaries">
+        <View style={styles.homeHeroGlowPrimary} />
+        <View style={styles.homeHeroGlowSecondary} />
+        <View
+          style={styles.homeHeroMarkBox}
+          nativeID="home-hero-anniversaries-mark"
+          testID="home-hero-anniversaries-mark"
+        >
+          <Image source={BRAND_MARK} style={styles.homeHeroMark} resizeMode="contain" accessible={false} />
+        </View>
+        <View style={styles.flex1}>
+          <Text style={styles.homeHeroTitle}>우리의 기념일</Text>
+          <Text style={styles.homeHeroSub}>소중한 날짜를 저장하고 편하게 관리해요.</Text>
+        </View>
+      </View>
+
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>기념일 관리</Text>
         <Text style={styles.sectionSub}>{notice}</Text>
@@ -109,7 +127,9 @@ export default function AnniversariesPage() {
               <View style={[styles.eventDot, styles.dotAnniversary]} />
               <View style={styles.flex1}>
                 <Text style={styles.eventTitle}>{item.name}</Text>
-                <Text style={styles.eventMeta}>{item.baseDate} · {item.ruleType}</Text>
+                <Text style={styles.eventMeta}>
+                  {item.baseDate} · {item.ruleType}
+                </Text>
               </View>
             </View>
           ))

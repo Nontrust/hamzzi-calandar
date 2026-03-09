@@ -1,8 +1,10 @@
-﻿import { Redirect, Slot, usePathname, useRouter } from "expo-router";
+import { Redirect, Slot, usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, SafeAreaView, Text, View, useWindowDimensions } from "react-native";
+import { logout } from "../../src/authClient";
 import { useAuthSession } from "../src/auth/AuthSessionProvider";
 import { decideAppRoute } from "../src/auth/routeGuards";
+import { useActiveRole } from "../src/auth/useActiveRole";
 import { styles } from "../src/ui/appStyles";
 
 type NavItem = {
@@ -17,6 +19,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "일정", href: "/schedule", subtitle: "시험/캘린더 흐름을 확인해요" },
   { label: "설정", href: "/settings", subtitle: "앱 환경과 계정을 관리해요" }
 ];
+
+function roleLabel(role: "A" | "B" | null | undefined) {
+  if (role === "A") return "나햄찌";
+  if (role === "B") return "햄찌 메이트";
+  return "미설정";
+}
 
 function normalizePath(pathname: string): NavItem["href"] {
   if (pathname === "/anniversaries") return "/anniversaries";
@@ -49,10 +57,12 @@ function SideMenu({ current, onNavigate }: { current: NavItem["href"]; onNavigat
 }
 
 export default function AppLayout() {
-  const { isBootstrapping, session } = useAuthSession();
+  const { isBootstrapping, session, setSession } = useAuthSession();
+  const { activeRole, clearRole } = useActiveRole();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 960;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const decision = decideAppRoute(isBootstrapping, session);
   const pathname = usePathname();
   const router = useRouter();
@@ -62,7 +72,16 @@ export default function AppLayout() {
 
   function handleNavigate(href: NavItem["href"]) {
     setMenuOpen(false);
+    setAccountMenuOpen(false);
     router.push(href);
+  }
+
+  async function handleLogout() {
+    await logout();
+    await clearRole();
+    setSession(null);
+    setAccountMenuOpen(false);
+    router.replace("/login");
   }
 
   if (decision === "loading") {
@@ -109,9 +128,22 @@ export default function AppLayout() {
                 <Text style={styles.shellHeaderSub}>{currentMeta.subtitle}</Text>
               </View>
             </View>
-            <View style={styles.shellUserBadge}>
-              <Text style={styles.shellUserName}>{session?.user.displayName}</Text>
-              <Text style={styles.shellUserId}>{session?.user.loginId}</Text>
+
+            <View style={styles.shellUserWrap}>
+              <Pressable style={styles.shellUserBadge} onPress={() => setAccountMenuOpen((prev) => !prev)}>
+                <Text style={styles.shellUserName}>{session?.user.displayName}</Text>
+                <Text style={styles.shellUserId}>{session?.user.loginId}</Text>
+              </Pressable>
+              {accountMenuOpen ? (
+                <View style={styles.accountPopup}>
+                  <Text style={styles.accountPopupName}>{session?.user.displayName}</Text>
+                  <Text style={styles.accountPopupMeta}>아이디: {session?.user.loginId}</Text>
+                  <Text style={styles.accountPopupMeta}>롤: {roleLabel(activeRole ?? session?.user.defaultRole)}</Text>
+                  <Pressable style={styles.accountLogoutButton} onPress={() => void handleLogout()}>
+                    <Text style={styles.accountLogoutButtonText}>로그아웃</Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </View>
           <View style={styles.shellContent}>

@@ -61,6 +61,8 @@ export const styles = StyleSheet.create({
     gap: 12
   },
   shellHeader: {
+    position: "relative",
+    zIndex: 30,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -69,7 +71,8 @@ export const styles = StyleSheet.create({
     borderColor: "#dbe3ef",
     borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 12
+    paddingVertical: 12,
+    elevation: 12
   },
   shellHeaderLeft: {
     flexDirection: "row",
@@ -93,6 +96,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10
   },
+  shellUserWrap: {
+    position: "relative"
+  },
   shellUserName: {
     fontWeight: "800",
     color: "#0f172a"
@@ -101,8 +107,51 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b"
   },
+  accountPopup: {
+    position: "absolute",
+    top: 44,
+    right: 0,
+    minWidth: 210,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dbe3ef",
+    backgroundColor: "#ffffff",
+    padding: 12,
+    gap: 6,
+    zIndex: 40,
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 8
+  },
+  accountPopupName: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a"
+  },
+  accountPopupMeta: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600"
+  },
+  accountLogoutButton: {
+    marginTop: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    backgroundColor: "#fef2f2",
+    paddingVertical: 8,
+    alignItems: "center"
+  },
+  accountLogoutButtonText: {
+    color: "#b91c1c",
+    fontWeight: "800",
+    fontSize: 13
+  },
   shellContent: {
-    flex: 1
+    flex: 1,
+    zIndex: 1
   },
   mobileMenuButton: {
     width: 34,
@@ -311,6 +360,77 @@ export const styles = StyleSheet.create({
   headerSub: {
     color: "#667085"
   },
+  homeHero: {
+    position: "relative",
+    overflow: "hidden",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FAF8EC",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#efe7c8",
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  homeHeroGlowPrimary: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(220, 183, 112, 0.28)",
+    top: -70,
+    left: -40
+  },
+  homeHeroGlowSecondary: {
+    position: "absolute",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: "rgba(255, 221, 158, 0.24)",
+    bottom: -70,
+    right: -36
+  },
+  homeHeroBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: "#eadfb6"
+  },
+  homeHeroMarkBox: {
+    width: 84,
+    height: 84,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: "#eadfb6"
+  },
+  homeHeroMark: {
+    width: 108,
+    height: 36
+  },
+  homeHeroMarkMain: {
+    width: 130,
+    height: 44,
+    transform: [{ scale: 1.08 }]
+  },
+  homeHeroTitle: {
+    fontSize: 19,
+    fontWeight: "900",
+    color: "#3d2f1f"
+  },
+  homeHeroSub: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6a5b46"
+  },
   roleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -429,6 +549,15 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700"
   },
+  calendarSundayText: {
+    color: "#dc2626"
+  },
+  calendarSaturdayText: {
+    color: "#2563eb"
+  },
+  calendarHolidayText: {
+    color: "#b91c1c"
+  },
   calendarGrid: {
     gap: 6
   },
@@ -462,6 +591,24 @@ export const styles = StyleSheet.create({
     backgroundColor: "#dbeafe",
     borderColor: "#60a5fa"
   },
+  calendarHolidayCell: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0"
+  },
+  calendarHolidayBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#dc2626",
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1
+  },
+  calendarHolidayBadgeText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "800"
+  },
   calendarDayText: {
     color: "#334155",
     fontWeight: "700"
@@ -479,6 +626,9 @@ export const styles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 4,
     backgroundColor: "#4f46e5"
+  },
+  calendarHolidayDot: {
+    backgroundColor: "#dc2626"
   },
   summaryColumns: {
     gap: theme.spacing.sm
@@ -522,6 +672,9 @@ export const styles = StyleSheet.create({
   dotExam: {
     backgroundColor: theme.colors.accentExam
   },
+  dotHoliday: {
+    backgroundColor: "#dc2626"
+  },
   eventTitle: {
     fontWeight: "700",
     color: theme.colors.text
@@ -529,6 +682,10 @@ export const styles = StyleSheet.create({
   eventMeta: {
     color: theme.colors.textSubtle,
     fontSize: theme.typography.caption
+  },
+  eventMetaHoliday: {
+    color: "#b91c1c",
+    fontWeight: "700"
   },
   actionsWrap: {
     gap: theme.spacing.sm

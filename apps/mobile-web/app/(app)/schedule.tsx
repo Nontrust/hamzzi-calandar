@@ -1,9 +1,11 @@
-﻿import { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, ScrollView, Text, View } from "react-native";
 import { fetchCalendarMonth, mapErrorToMessage } from "../../src/anniversaryClient";
 import { useActiveRole } from "../src/auth/useActiveRole";
 import { AppButton } from "../src/ui/AppButton";
 import { styles } from "../src/ui/appStyles";
+
+const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
 type MonthItem = { kind: "exam" | "anniversary"; date: string; title: string };
 
@@ -39,6 +41,18 @@ export default function SchedulePage() {
 
   return (
     <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent}>
+      <View style={styles.homeHero} nativeID="home-hero-schedule" testID="home-hero-schedule">
+        <View style={styles.homeHeroGlowPrimary} />
+        <View style={styles.homeHeroGlowSecondary} />
+        <View style={styles.homeHeroMarkBox} nativeID="home-hero-schedule-mark" testID="home-hero-schedule-mark">
+          <Image source={BRAND_MARK} style={styles.homeHeroMark} resizeMode="contain" accessible={false} />
+        </View>
+        <View style={styles.flex1}>
+          <Text style={styles.homeHeroTitle}>오늘의 일정</Text>
+          <Text style={styles.homeHeroSub}>시험과 기념일 일정을 한 번에 확인해요.</Text>
+        </View>
+      </View>
+
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>월간 일정</Text>
         <Text style={styles.sectionSub}>{notice}</Text>
@@ -55,7 +69,9 @@ export default function SchedulePage() {
               <View style={[styles.eventDot, item.kind === "anniversary" ? styles.dotAnniversary : styles.dotExam]} />
               <View style={styles.flex1}>
                 <Text style={styles.eventTitle}>{item.title}</Text>
-                <Text style={styles.eventMeta}>{item.date} · {getItemKindLabel(item.kind)}</Text>
+                <Text style={styles.eventMeta}>
+                  {item.date} · {getItemKindLabel(item.kind)}
+                </Text>
               </View>
             </View>
           ))

@@ -1,14 +1,16 @@
-﻿import * as Calendar from "expo-calendar";
+import * as Calendar from "expo-calendar";
 import * as ImagePicker from "expo-image-picker";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, View } from "react-native";
 import { logout } from "../../src/authClient";
 import { useAuthSession } from "../src/auth/AuthSessionProvider";
 import { useActiveRole } from "../src/auth/useActiveRole";
 import { AppButton } from "../src/ui/AppButton";
 import { styles } from "../src/ui/appStyles";
+
+const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
 function getPermissionLabel(status: string) {
   switch (status) {
@@ -72,6 +74,18 @@ export default function SettingsPage() {
 
   return (
     <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent}>
+      <View style={styles.homeHero} nativeID="home-hero-settings" testID="home-hero-settings">
+        <View style={styles.homeHeroGlowPrimary} />
+        <View style={styles.homeHeroGlowSecondary} />
+        <View style={styles.homeHeroMarkBox} nativeID="home-hero-settings-mark" testID="home-hero-settings-mark">
+          <Image source={BRAND_MARK} style={styles.homeHeroMark} resizeMode="contain" accessible={false} />
+        </View>
+        <View style={styles.flex1}>
+          <Text style={styles.homeHeroTitle}>설정 한눈에</Text>
+          <Text style={styles.homeHeroSub}>권한 상태와 계정 정보를 빠르게 관리해요.</Text>
+        </View>
+      </View>
+
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>권한 관리</Text>
         <Text style={styles.sectionSub}>{notice}</Text>

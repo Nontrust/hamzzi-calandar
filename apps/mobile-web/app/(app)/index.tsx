@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { canManageRewards, getRoleHelper, getRoleLabel } from "@nahamzzi/domain";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { fetchCalendarMonth, mapErrorToMessage } from "../../src/anniversaryClient";
+import { fetchKoreanPublicHolidays } from "../../src/holidayClient";
 import { AppButton } from "../src/ui/AppButton";
 import { useActiveRole } from "../src/auth/useActiveRole";
 import { styles } from "../src/ui/appStyles";
 
+const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
+
 type MonthItem = { kind: "exam" | "anniversary"; date: string; title: string };
+type HolidayItem = { date: string; title: string };
 type CalendarCell = { type: "blank" } | { type: "day"; day: number; iso: string };
 
 function formatMonth(date: Date) {
@@ -27,15 +30,18 @@ function monthLabel(month: string) {
   return `${year}년 ${Number(mm)}월`;
 }
 
-function toKindLabel(kind: MonthItem["kind"]) {
-  return kind === "anniversary" ? "기념일" : "시험";
+function toKindLabel(kind: MonthItem["kind"] | "holiday") {
+  if (kind === "holiday") return "공휴일";
+  return kind === "anniversary" ? "기념일" : "일정";
 }
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { activeRole, selectRole } = useActiveRole();
-  const [notice, setNotice] = useState("일정을 불러오는 중...");
+  const { activeRole } = useActiveRole();
+
+  const [notice, setNotice] = useState("");
   const [items, setItems] = useState<MonthItem[]>([]);
+  const [holidays, setHolidays] = useState<HolidayItem[]>([]);
 
   const today = new Date();
   const todayIso = formatDate(today);
@@ -46,7 +52,8 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!activeRole) {
       setItems([]);
-      setNotice("역할을 먼저 선택해 주세요.");
+      setHolidays([]);
+      setNotice("권한 정보를 불러오는 중입니다.");
       return;
     }
     void refreshMonth(viewMonth);
@@ -55,25 +62,39 @@ export default function HomeScreen() {
 
   async function refreshMonth(month: string) {
     if (!activeRole) return;
-    const res = await fetchCalendarMonth(activeRole, month);
-    if (!res.success) {
+    const [calendarRes, holidayRes] = await Promise.all([
+      fetchCalendarMonth(activeRole, month),
+      fetchKoreanPublicHolidays(Number(month.slice(0, 4)))
+    ]);
+
+    if (!calendarRes.success) {
       setItems([]);
-      setNotice(mapErrorToMessage(res.errorCode));
+      setHolidays([]);
+      setNotice(mapErrorToMessage(calendarRes.errorCode));
       return;
     }
 
-    setItems([...res.data.items].sort((a, b) => a.date.localeCompare(b.date)));
+    const monthHolidays = holidayRes
+      .filter((item) => item.date.startsWith(`${month}-`))
+      .map((item) => ({ date: item.date, title: item.localName || item.name }));
+
+    setItems([...calendarRes.data.items].sort((a, b) => a.date.localeCompare(b.date)));
+    setHolidays(monthHolidays);
+
     const firstDay = `${month}-01`;
     const hasSelectedInMonth = selectedDate.startsWith(`${month}-`);
     setSelectedDate(hasSelectedInMonth ? selectedDate : firstDay);
-    setNotice(`선택 월: ${monthLabel(month)}`);
+    setNotice("");
   }
 
   const dateCountMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of items) map.set(item.date, (map.get(item.date) ?? 0) + 1);
+    for (const item of holidays) map.set(item.date, (map.get(item.date) ?? 0) + 1);
     return map;
-  }, [items]);
+  }, [items, holidays]);
+
+  const holidayDateSet = useMemo(() => new Set(holidays.map((item) => item.date)), [holidays]);
 
   const monthCells = useMemo(() => {
     const [yearRaw, monthRaw] = viewMonth.split("-");
@@ -98,29 +119,28 @@ export default function HomeScreen() {
     return rows;
   }, [monthCells]);
 
-  const selectedDateItems = useMemo(() => items.filter((item) => item.date === selectedDate), [items, selectedDate]);
+  const selectedDateItems = useMemo(() => {
+    const base = items.map((item) => ({ id: `${item.kind}-${item.date}-${item.title}`, kind: item.kind, date: item.date, title: item.title }));
+    const holiday = holidays.map((item) => ({ id: `holiday-${item.date}-${item.title}`, kind: "holiday" as const, date: item.date, title: item.title }));
+    return [...base, ...holiday].filter((item) => item.date === selectedDate);
+  }, [items, holidays, selectedDate]);
 
   return (
     <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent}>
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>역할 선택</Text>
-        <View style={styles.roleRow}>
-          <Pressable onPress={() => void selectRole("A")} style={[styles.roleChip, activeRole === "A" && styles.roleChipActive]}>
-            <Text style={[styles.roleChipText, activeRole === "A" && styles.roleChipTextActive]}>{getRoleLabel("A")}</Text>
-          </Pressable>
-          <Pressable onPress={() => void selectRole("B")} style={[styles.roleChip, activeRole === "B" && styles.roleChipActive]}>
-            <Text style={[styles.roleChipText, activeRole === "B" && styles.roleChipTextActive]}>{getRoleLabel("B")}</Text>
-          </Pressable>
+      <View style={styles.homeHero} nativeID="home-hero-main" testID="home-hero-main">
+        <View style={styles.homeHeroGlowPrimary} />
+        <View style={styles.homeHeroGlowSecondary} />
+        <View style={styles.homeHeroMarkBox} nativeID="home-hero-main-mark" testID="home-hero-main-mark">
+          <Image source={BRAND_MARK} style={[styles.homeHeroMark, styles.homeHeroMarkMain]} resizeMode="contain" accessible={false} />
         </View>
-        <Text style={styles.infoBody}>{activeRole ? getRoleHelper(activeRole) : "역할을 먼저 선택해 주세요."}</Text>
-        <Text style={styles.infoMeta}>보상 관리 권한: {activeRole && canManageRewards(activeRole) ? "허용" : "제한"}</Text>
+        <View style={styles.flex1}>
+          <Text style={styles.homeHeroTitle}>햄찌의 하루</Text>
+          <Text style={styles.homeHeroSub}>오늘 일정과 기념일을 한눈에 확인해요.</Text>
+        </View>
       </View>
 
       <View style={styles.sectionCard}>
-        <View style={styles.calendarHeaderRow}>
-          <Text style={styles.sectionTitle}>달력</Text>
-          <AppButton label="새로고침" onPress={() => void refreshMonth(viewMonth)} variant="secondary" />
-        </View>
+        <Text style={styles.sectionTitle}>이번 달 캘린더</Text>
         <View style={styles.calendarMonthRow}>
           <Pressable style={styles.calendarMonthButton} onPress={() => setViewMonthDate((prev) => moveMonth(prev, -1))}>
             <Text style={styles.calendarMonthButtonText}>이전</Text>
@@ -130,11 +150,14 @@ export default function HomeScreen() {
             <Text style={styles.calendarMonthButtonText}>다음</Text>
           </Pressable>
         </View>
-        <Text style={styles.sectionSub}>{notice}</Text>
+        {notice ? <Text style={styles.sectionSub}>{notice}</Text> : null}
 
         <View style={styles.calendarWeekRow}>
-          {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-            <Text key={day} style={styles.calendarWeekLabel}>
+          {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
+            <Text
+              key={day}
+              style={[styles.calendarWeekLabel, idx === 0 && styles.calendarSundayText, idx === 6 && styles.calendarSaturdayText]}
+            >
               {day}
             </Text>
           ))}
@@ -147,9 +170,14 @@ export default function HomeScreen() {
                 if (cell.type === "blank") {
                   return <View key={`blank-${rowIndex}-${colIndex}`} style={[styles.calendarCell, styles.calendarCellBlank]} />;
                 }
+
                 const hasEvents = (dateCountMap.get(cell.iso) ?? 0) > 0;
                 const isToday = cell.iso === todayIso;
                 const isSelected = cell.iso === selectedDate;
+                const isHoliday = holidayDateSet.has(cell.iso);
+                const isSunday = colIndex === 0;
+                const isSaturday = colIndex === 6;
+
                 return (
                   <Pressable
                     key={cell.iso}
@@ -157,6 +185,7 @@ export default function HomeScreen() {
                     style={[
                       styles.calendarCell,
                       hasEvents && styles.calendarCellActive,
+                      isHoliday && styles.calendarHolidayCell,
                       isToday && styles.calendarCellToday,
                       isSelected && styles.calendarCellSelected
                     ]}
@@ -164,13 +193,16 @@ export default function HomeScreen() {
                     <Text
                       style={[
                         styles.calendarDayText,
+                        isSunday && styles.calendarSundayText,
+                        isSaturday && styles.calendarSaturdayText,
+                        isHoliday && styles.calendarHolidayText,
                         hasEvents && styles.calendarDayTextActive,
                         (isToday || isSelected) && styles.calendarDayTextToday
                       ]}
                     >
                       {cell.day}
                     </Text>
-                    {hasEvents ? <View style={styles.calendarDot} /> : null}
+                    {hasEvents ? <View style={[styles.calendarDot, isHoliday && styles.calendarHolidayDot]} /> : null}
                   </Pressable>
                 );
               })}
@@ -180,17 +212,22 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>선택 날짜 일정</Text>
+        <Text style={styles.sectionTitle}>선택한 날짜 일정</Text>
         <Text style={styles.sectionSub}>{selectedDate}</Text>
         {selectedDateItems.length === 0 ? (
-          <Text style={styles.emptyText}>해당 날짜 일정이 없습니다.</Text>
+          <Text style={styles.emptyText}>해당 날짜에 등록된 일정이 없습니다.</Text>
         ) : (
           selectedDateItems.map((item) => (
-            <View key={`${item.kind}-${item.date}-${item.title}`} style={styles.eventRow}>
-              <View style={[styles.eventDot, item.kind === "anniversary" ? styles.dotAnniversary : styles.dotExam]} />
+            <View key={item.id} style={styles.eventRow}>
+              <View
+                style={[
+                  styles.eventDot,
+                  item.kind === "anniversary" ? styles.dotAnniversary : item.kind === "holiday" ? styles.dotHoliday : styles.dotExam
+                ]}
+              />
               <View style={styles.flex1}>
                 <Text style={styles.eventTitle}>{item.title}</Text>
-                <Text style={styles.eventMeta}>
+                <Text style={[styles.eventMeta, item.kind === "holiday" && styles.eventMetaHoliday]}>
                   {toKindLabel(item.kind)} · {item.date}
                 </Text>
               </View>
