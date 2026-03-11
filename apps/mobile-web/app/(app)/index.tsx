@@ -9,36 +9,39 @@ import { styles } from "../src/ui/appStyles";
 
 const BRAND_MARK = require("../../../../openspec/statics/nahamzzi_mark.png");
 
-type MonthItem = { kind: "exam" | "anniversary"; date: string; title: string };
+type MonthItem = {
+  kind: "exam" | "anniversary";
+  date: string;
+  title: string;
+  category?: "birthday" | "anniversary" | "study" | "other";
+  reminderEnabled?: boolean;
+  noteSummary?: string;
+  ruleType?: "day_offset" | "monthly" | "yearly";
+};
 type HolidayItem = { date: string; title: string };
 type CalendarCell = { type: "blank" } | { type: "day"; day: number; iso: string };
 
 function formatMonth(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
-
 function formatDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-
 function moveMonth(date: Date, diff: number) {
   return new Date(date.getFullYear(), date.getMonth() + diff, 1);
 }
-
 function monthLabel(month: string) {
   const [year, mm] = month.split("-");
   return `${year}년 ${Number(mm)}월`;
 }
-
-function toKindLabel(kind: MonthItem["kind"] | "holiday") {
-  if (kind === "holiday") return "공휴일";
-  return kind === "anniversary" ? "기념일" : "일정";
+function toKindLabel(item: MonthItem | { kind: "holiday" }) {
+  if (item.kind === "holiday") return "공휴일";
+  return item.kind === "anniversary" ? "기념일" : "일정";
 }
 
 export default function HomeScreen() {
   const router = useRouter();
   const { activeRole } = useActiveRole();
-
   const [notice, setNotice] = useState("");
   const [items, setItems] = useState<MonthItem[]>([]);
   const [holidays, setHolidays] = useState<HolidayItem[]>([]);
@@ -80,11 +83,11 @@ export default function HomeScreen() {
 
     setItems([...calendarRes.data.items].sort((a, b) => a.date.localeCompare(b.date)));
     setHolidays(monthHolidays);
+    setNotice(calendarRes.errorCode === "EXTERNAL_SYNC_FAILED" ? mapErrorToMessage("EXTERNAL_SYNC_FAILED") : "");
 
     const firstDay = `${month}-01`;
     const hasSelectedInMonth = selectedDate.startsWith(`${month}-`);
     setSelectedDate(hasSelectedInMonth ? selectedDate : firstDay);
-    setNotice("");
   }
 
   const dateCountMap = useMemo(() => {
@@ -103,12 +106,9 @@ export default function HomeScreen() {
     const firstDay = new Date(year, month - 1, 1);
     const firstWeekday = firstDay.getDay();
     const lastDate = new Date(year, month, 0).getDate();
-
     const cells: CalendarCell[] = [];
     for (let i = 0; i < firstWeekday; i += 1) cells.push({ type: "blank" });
-    for (let day = 1; day <= lastDate; day += 1) {
-      cells.push({ type: "day", day, iso: `${viewMonth}-${String(day).padStart(2, "0")}` });
-    }
+    for (let day = 1; day <= lastDate; day += 1) cells.push({ type: "day", day, iso: `${viewMonth}-${String(day).padStart(2, "0")}` });
     while (cells.length % 7 !== 0) cells.push({ type: "blank" });
     return cells;
   }, [viewMonth]);
@@ -120,7 +120,7 @@ export default function HomeScreen() {
   }, [monthCells]);
 
   const selectedDateItems = useMemo(() => {
-    const base = items.map((item) => ({ id: `${item.kind}-${item.date}-${item.title}`, kind: item.kind, date: item.date, title: item.title }));
+    const base = items.map((item) => ({ id: `${item.kind}-${item.date}-${item.title}`, ...item }));
     const holiday = holidays.map((item) => ({ id: `holiday-${item.date}-${item.title}`, kind: "holiday" as const, date: item.date, title: item.title }));
     return [...base, ...holiday].filter((item) => item.date === selectedDate);
   }, [items, holidays, selectedDate]);
@@ -135,7 +135,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.flex1}>
           <Text style={styles.homeHeroTitle}>햄찌의 하루</Text>
-          <Text style={styles.homeHeroSub}>오늘 일정과 기념일을 한눈에 확인해요.</Text>
+          <Text style={styles.homeHeroSub}>오늘 일정과 기념일 상세 정보를 한눈에 확인해요.</Text>
         </View>
       </View>
 
@@ -154,10 +154,7 @@ export default function HomeScreen() {
 
         <View style={styles.calendarWeekRow}>
           {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
-            <Text
-              key={day}
-              style={[styles.calendarWeekLabel, idx === 0 && styles.calendarSundayText, idx === 6 && styles.calendarSaturdayText]}
-            >
+            <Text key={day} style={[styles.calendarWeekLabel, idx === 0 && styles.calendarSundayText, idx === 6 && styles.calendarSaturdayText]}>
               {day}
             </Text>
           ))}
@@ -167,9 +164,7 @@ export default function HomeScreen() {
           {calendarRows.map((row, rowIndex) => (
             <View key={`row-${rowIndex}`} style={styles.calendarGridRow}>
               {row.map((cell, colIndex) => {
-                if (cell.type === "blank") {
-                  return <View key={`blank-${rowIndex}-${colIndex}`} style={[styles.calendarCell, styles.calendarCellBlank]} />;
-                }
+                if (cell.type === "blank") return <View key={`blank-${rowIndex}-${colIndex}`} style={[styles.calendarCell, styles.calendarCellBlank]} />;
 
                 const hasEvents = (dateCountMap.get(cell.iso) ?? 0) > 0;
                 const isToday = cell.iso === todayIso;
@@ -228,8 +223,14 @@ export default function HomeScreen() {
               <View style={styles.flex1}>
                 <Text style={styles.eventTitle}>{item.title}</Text>
                 <Text style={[styles.eventMeta, item.kind === "holiday" && styles.eventMetaHoliday]}>
-                  {toKindLabel(item.kind)} · {item.date}
+                  {toKindLabel(item as MonthItem | { kind: "holiday" })} · {item.date}
                 </Text>
+                {"category" in item && item.category ? (
+                  <Text style={styles.eventMeta}>
+                    category={item.category} · reminder={item.reminderEnabled ? "on" : "off"} · rule={item.ruleType}
+                  </Text>
+                ) : null}
+                {"noteSummary" in item && item.noteSummary ? <Text style={styles.eventMeta}>note={item.noteSummary}</Text> : null}
               </View>
             </View>
           ))
