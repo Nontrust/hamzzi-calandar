@@ -351,7 +351,20 @@ export async function handleDeleteAnniversary(
 export async function handleCalendarMonthView(
   actor: RequestActor | null,
   month: string
-): Promise<ApiResponse<{ month: string; items: Array<{ kind: "exam" | "anniversary"; date: string; title: string }> }>> {
+): Promise<
+  ApiResponse<{
+    month: string;
+    items: Array<{
+      kind: "exam" | "anniversary";
+      date: string;
+      title: string;
+      category?: "birthday" | "anniversary" | "study" | "other";
+      reminderEnabled?: boolean;
+      noteSummary?: string;
+      ruleType?: "day_offset" | "monthly" | "yearly";
+    }>;
+  }>
+> {
   const ctx = createRequestContext();
   try {
     const authed = requireAuthenticated(actor);
