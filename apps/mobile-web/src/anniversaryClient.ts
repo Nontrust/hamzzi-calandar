@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { UserRole } from "@nahamzzi/domain";
 import { requireSession } from "./authClient";
 
@@ -7,7 +7,10 @@ type ErrorCode =
   | "AUTH_SESSION_EXPIRED"
   | "AUTH_INVALID_CREDENTIALS"
   | "VALIDATION_ERROR"
+  | "ANNIVERSARY_CREATE_LOCKED"
   | "ANNIVERSARY_NOT_FOUND"
+  | "ANNIVERSARY_EDIT_LOCKED"
+  | "ANNIVERSARY_DELETE_LOCKED"
   | "FORBIDDEN_OWNER"
   | "FORBIDDEN_ROLE"
   | "EXTERNAL_SYNC_FAILED"
@@ -25,7 +28,7 @@ interface ServerEnvelope<T> {
   errorCode: string | null;
 }
 
-export type AnniversaryCategory = "birthday" | "anniversary" | "study" | "other";
+export type AnniversaryCategory = "birthday" | "relationship" | "anniversary" | "other";
 export type AnniversaryRuleType = "day_offset" | "monthly" | "yearly";
 
 export interface AnniversaryRecord {
@@ -40,6 +43,7 @@ export interface AnniversaryRecord {
   ruleType: AnniversaryRuleType;
   ruleValue: number;
   isActive: boolean;
+  isDeleteLocked: boolean;
 }
 
 export interface AnniversaryUpsertInput {
@@ -67,47 +71,53 @@ type MonthPayload = { month: string; items: MonthItem[] };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 const LOCAL_ANNIVERSARIES_KEY = "local-anniversaries-v2";
-const FALLBACK_ANNIVERSARIES: AnniversaryRecord[] = [
-  {
-    id: "fallback-a1",
-    userId: "local-user",
-    name: "Hamzzi Birthday",
-    baseDate: "2024-01-08",
-    category: "birthday",
-    note: "Hamzzi day",
-    reminderEnabled: true,
-    reminderOffsetDays: 3,
-    ruleType: "yearly",
-    ruleValue: 1,
-    isActive: true
-  },
-  {
-    id: "fallback-a2",
-    userId: "local-user",
-    name: "Anniversary Day",
-    baseDate: "2024-03-23",
-    category: "anniversary",
-    note: "Our day",
-    reminderEnabled: true,
-    reminderOffsetDays: 7,
-    ruleType: "yearly",
-    ruleValue: 1,
-    isActive: true
-  },
-  {
-    id: "fallback-a3",
-    userId: "local-user",
-    name: "My Birthday",
-    baseDate: "2024-08-04",
-    category: "birthday",
-    note: "",
-    reminderEnabled: true,
-    reminderOffsetDays: 5,
-    ruleType: "yearly",
-    ruleValue: 1,
-    isActive: true
-  }
-];
+
+function getSharedFallbackAnniversaries(): AnniversaryRecord[] {
+  return [
+    {
+      id: "fallback-birthday-me",
+      userId: "shared",
+      name: "내 생일",
+      baseDate: "1995-08-04",
+      category: "birthday",
+      note: "",
+      reminderEnabled: true,
+      reminderOffsetDays: 5,
+      ruleType: "yearly",
+      ruleValue: 1,
+      isActive: true,
+      isDeleteLocked: true
+    },
+    {
+      id: "fallback-birthday-hamzzi",
+      userId: "shared",
+      name: "햄찌 생일",
+      baseDate: "1998-01-08",
+      category: "birthday",
+      note: "",
+      reminderEnabled: true,
+      reminderOffsetDays: 3,
+      ruleType: "yearly",
+      ruleValue: 1,
+      isActive: true,
+      isDeleteLocked: true
+    },
+    {
+      id: "fallback-relationship-hamzzi",
+      userId: "shared",
+      name: "햄찌 주운날",
+      baseDate: "2024-03-23",
+      category: "relationship",
+      note: "",
+      reminderEnabled: false,
+      reminderOffsetDays: 0,
+      ruleType: "yearly",
+      ruleValue: 1,
+      isActive: true,
+      isDeleteLocked: false
+    }
+  ];
+}
 
 function ok<T>(data: T): ApiResponse<T> {
   return { success: true, data, errorCode: null };
@@ -123,7 +133,10 @@ function normalizeErrorCode(code: string | null): ErrorCode {
     case "AUTH_SESSION_EXPIRED":
     case "AUTH_INVALID_CREDENTIALS":
     case "VALIDATION_ERROR":
+    case "ANNIVERSARY_CREATE_LOCKED":
     case "ANNIVERSARY_NOT_FOUND":
+    case "ANNIVERSARY_EDIT_LOCKED":
+    case "ANNIVERSARY_DELETE_LOCKED":
     case "FORBIDDEN_OWNER":
     case "FORBIDDEN_ROLE":
     case "EXTERNAL_SYNC_FAILED":
@@ -139,7 +152,8 @@ function normalizeRecord(record: Partial<AnniversaryRecord> & Pick<AnniversaryRe
     category: record.category ?? "anniversary",
     note: record.note ?? "",
     reminderEnabled: record.reminderEnabled ?? false,
-    reminderOffsetDays: record.reminderOffsetDays ?? 0
+    reminderOffsetDays: record.reminderOffsetDays ?? 0,
+    isDeleteLocked: record.isDeleteLocked ?? false
   };
 }
 
@@ -181,19 +195,28 @@ async function callServer<T>(
 async function getLocalAnniversaries(): Promise<AnniversaryRecord[]> {
   const raw = await AsyncStorage.getItem(LOCAL_ANNIVERSARIES_KEY);
   if (!raw) {
-    await AsyncStorage.setItem(LOCAL_ANNIVERSARIES_KEY, JSON.stringify(FALLBACK_ANNIVERSARIES));
-    return FALLBACK_ANNIVERSARIES;
+    const fallback = getSharedFallbackAnniversaries();
+    await setLocalAnniversaries(fallback);
+    return fallback;
   }
   try {
     const parsed = JSON.parse(raw) as AnniversaryRecord[];
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      await AsyncStorage.setItem(LOCAL_ANNIVERSARIES_KEY, JSON.stringify(FALLBACK_ANNIVERSARIES));
-      return FALLBACK_ANNIVERSARIES;
+      const fallback = getSharedFallbackAnniversaries();
+      await setLocalAnniversaries(fallback);
+      return fallback;
     }
-    return parsed.map((item) => normalizeRecord(item));
+    const normalized = parsed.map((item) => normalizeRecord(item));
+    const hasRelationship = normalized.some((item) => item.category === "relationship");
+    if (hasRelationship) return normalized;
+
+    const merged = [...normalized, ...getSharedFallbackAnniversaries().filter((item) => item.category === "relationship")];
+    await setLocalAnniversaries(merged);
+    return merged;
   } catch {
-    await AsyncStorage.setItem(LOCAL_ANNIVERSARIES_KEY, JSON.stringify(FALLBACK_ANNIVERSARIES));
-    return FALLBACK_ANNIVERSARIES;
+    const fallback = getSharedFallbackAnniversaries();
+    await setLocalAnniversaries(fallback);
+    return fallback;
   }
 }
 
@@ -207,17 +230,69 @@ function summarizeNote(note: string): string {
   return trimmed.length > 26 ? `${trimmed.slice(0, 26)}...` : trimmed;
 }
 
+function formatRelationshipMilestoneTitle(name: string, dayCount: number) {
+  return `${name} ${dayCount}일`;
+}
+
+function formatRelationshipYearlyTitle(name: string, years: number) {
+  return `${name} ${years}주년`;
+}
+
 function buildLocalMonthItems(month: string, anniversaries: AnniversaryRecord[]): MonthPayload["items"] {
-  const [, targetMonth] = month.split("-");
+  const [targetYear, targetMonth] = month.split("-").map(Number);
   return anniversaries
     .filter((item) => item.isActive)
     .flatMap((item) => {
-      const [, itemMonth, itemDay] = item.baseDate.split("-");
+      const [baseYear, itemMonth, itemDay] = item.baseDate.split("-").map(Number);
+
+      if (item.category === "relationship") {
+        const results: MonthPayload["items"] = [];
+        const monthStart = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
+        const monthEnd = new Date(Date.UTC(targetYear, targetMonth, 0));
+        const base = new Date(Date.UTC(baseYear, itemMonth - 1, itemDay));
+
+        for (let dayCount = 100; dayCount <= 50000; dayCount += 100) {
+          const target = new Date(base.getTime() + (dayCount - 1) * 24 * 60 * 60 * 1000);
+          if (target < monthStart) continue;
+          if (target > monthEnd) break;
+
+          const y = target.getUTCFullYear();
+          const m = `${target.getUTCMonth() + 1}`.padStart(2, "0");
+          const d = `${target.getUTCDate()}`.padStart(2, "0");
+          results.push({
+            kind: "anniversary" as const,
+            date: `${y}-${m}-${d}`,
+            title: formatRelationshipMilestoneTitle(item.name, dayCount),
+            category: item.category,
+            reminderEnabled: item.reminderEnabled,
+            noteSummary: summarizeNote(item.note),
+            ruleType: item.ruleType
+          });
+        }
+
+        if (itemMonth === targetMonth) {
+          const years = targetYear - baseYear;
+          if (years >= 1) {
+            results.push({
+              kind: "anniversary" as const,
+              date: `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(itemDay).padStart(2, "0")}`,
+              title: formatRelationshipYearlyTitle(item.name, years),
+              category: item.category,
+              reminderEnabled: item.reminderEnabled,
+              noteSummary: summarizeNote(item.note),
+              ruleType: item.ruleType
+            });
+          }
+        }
+
+        return results;
+      }
+
       if (itemMonth !== targetMonth) return [];
       return [
         {
           kind: "anniversary" as const,
-          date: `${month}-${itemDay}`,
+          date: `${month}-${String(itemDay).padStart(2, "0")}`,
           title: item.name,
           category: item.category,
           reminderEnabled: item.reminderEnabled,
@@ -266,6 +341,9 @@ export async function fetchAnniversaries(role: UserRole | null) {
 export async function createAnniversaryDetailed(role: UserRole | null, input: AnniversaryUpsertInput) {
   const validationError = validateUpsertInput(input);
   if (validationError) return fail("VALIDATION_ERROR", null as AnniversaryRecord | null);
+  if (input.category === "birthday" || input.category === "relationship") {
+    return fail("ANNIVERSARY_CREATE_LOCKED", null as AnniversaryRecord | null);
+  }
 
   const auth = await getAuthHeaders(role);
   if (!auth) return fail("AUTH_REQUIRED", null as AnniversaryRecord | null);
@@ -284,6 +362,7 @@ export async function createAnniversaryDetailed(role: UserRole | null, input: An
       id: `local-${Date.now().toString(36)}`,
       userId: local[0]?.userId ?? "local-user",
       isActive: true,
+      isDeleteLocked: false,
       ...input
     });
     await setLocalAnniversaries([...local, created]);
@@ -297,6 +376,10 @@ export async function updateAnniversaryDetailed(
   anniversaryId: string,
   patch: Partial<AnniversaryUpsertInput>
 ) {
+  if (patch.category === "birthday" || patch.category === "relationship") {
+    return fail("ANNIVERSARY_CREATE_LOCKED", null as AnniversaryRecord | null);
+  }
+
   const auth = await getAuthHeaders(role);
   if (!auth) return fail("AUTH_REQUIRED", null as AnniversaryRecord | null);
 
@@ -312,6 +395,9 @@ export async function updateAnniversaryDetailed(
     const local = await getLocalAnniversaries();
     const idx = local.findIndex((item) => item.id === anniversaryId);
     if (idx < 0) return fail("ANNIVERSARY_NOT_FOUND", null as AnniversaryRecord | null);
+    if (local[idx].isDeleteLocked || local[idx].category === "birthday" || local[idx].category === "relationship") {
+      return fail("ANNIVERSARY_EDIT_LOCKED", null as AnniversaryRecord | null);
+    }
     const next = [...local];
     next[idx] = normalizeRecord({ ...next[idx], ...patch });
     await setLocalAnniversaries(next);
@@ -347,6 +433,9 @@ export async function removeAnniversary(role: UserRole | null, anniversaryId: st
     const local = await getLocalAnniversaries();
     const target = local.find((item) => item.id === anniversaryId) ?? null;
     if (!target) return fail("ANNIVERSARY_NOT_FOUND", null as AnniversaryRecord | null);
+    if (target.isDeleteLocked || target.category === "birthday" || target.category === "relationship") {
+      return fail("ANNIVERSARY_DELETE_LOCKED", null as AnniversaryRecord | null);
+    }
     await setLocalAnniversaries(local.filter((item) => item.id !== anniversaryId));
     return ok(target);
   }
@@ -363,15 +452,23 @@ export function mapErrorToMessage(errorCode: ErrorCode | null): string {
       return "아이디 또는 비밀번호가 올바르지 않습니다.";
     case "VALIDATION_ERROR":
       return "입력값을 확인해 주세요.";
+    case "ANNIVERSARY_CREATE_LOCKED":
+      return "생일과 사귄날은 생성할 수 없습니다.";
     case "ANNIVERSARY_NOT_FOUND":
       return "기념일을 찾을 수 없습니다.";
+    case "ANNIVERSARY_EDIT_LOCKED":
+      return "기본 기념일은 수정할 수 없습니다.";
+    case "ANNIVERSARY_DELETE_LOCKED":
+      return "기본 기념일은 삭제할 수 없습니다.";
     case "FORBIDDEN_OWNER":
       return "본인 항목만 수정/삭제할 수 있습니다.";
     case "FORBIDDEN_ROLE":
       return "권한이 없습니다.";
     case "EXTERNAL_SYNC_FAILED":
-      return "서버 연결에 실패하여 로컬 데이터로 표시합니다.";
+      return "서버 연결에 실패해 로컬 데이터로 표시합니다.";
     default:
-      return "예상치 못한 오류가 발생했습니다.";
+      return "예상하지 못한 오류가 발생했습니다.";
   }
 }
+
+

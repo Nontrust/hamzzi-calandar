@@ -1,14 +1,15 @@
-## Why
+﻿## Why
 
-현재 기념일 추가 기능은 최소 필드만 저장되어, 기념일 성격(카테고리), 반복 규칙, 메모, 알림 설정 등 실제 사용에 필요한 정보를 충분히 담기 어렵다. 기념일 관리를 실사용 수준으로 올리기 위해 상세 정보 저장 구조를 명확히 확장해야 한다.
+기념일 데이터는 이제 단순한 이름/날짜 저장을 넘어서 카테고리, 메모, 알림, 반복 규칙, 공유 표시 규칙까지 함께 다뤄야 합니다. 특히 `birthday`와 `relationship`는 관리형 항목으로 고정되고, 일반 기념일만 수동 편집 가능한 정책이 필요했습니다. 이 변경은 서버 저장 구조와 클라이언트 표시 규칙을 확장해 현재 앱 동작을 문서화합니다.
 
 ## What Changes
 
-- 기념일 생성/수정 시 저장 가능한 상세 필드를 확장한다.
-- 상세 필드의 입력/검증 규칙을 정의하고 누락/형식 오류를 방지한다.
-- 상세 필드가 월간/일간 조회 응답에도 반영되도록 정렬/표시 기준을 정리한다.
-- 기존 단순 데이터와의 호환을 위해 마이그레이션/기본값 전략을 정의한다.
-- 외부 캘린더/공휴일 연동 실패 시에도 기념일 상세 데이터는 로컬/서버 기준으로 안정 조회되도록 한다.
+- 기념일 상세 필드(`category`, `note`, `reminderEnabled`, `reminderOffsetDays`, `ruleType`, `ruleValue`)를 저장/조회 구조에 포함합니다.
+- `birthday`, `relationship`, `anniversary`, `other` 카테고리 체계를 사용합니다.
+- `birthday`와 `relationship`는 관리형 항목으로 수동 생성/수정/삭제를 차단합니다.
+- 데모 사용자(`user-a`, `user-b`) 기준 생일/사귄날은 함께 조회되도록 공유 표시 규칙을 적용합니다.
+- `relationship`는 월간 일정에서 100일 단위와 연 주년 일정을 자동 생성합니다.
+- 서버 실패 시에도 로컬 fallback으로 기념일/월간 일정 조회가 유지되도록 합니다.
 
 ## Capabilities
 
@@ -16,8 +17,8 @@
 - 없음
 
 ### Modified Capabilities
-- `anniversary-data-persistence`: 기념일 데이터 모델 및 CRUD 저장 규칙을 상세 필드 중심으로 확장
-- `anniversary-calendar`: 확장된 기념일 상세 필드를 캘린더 조회/요약에 반영
+- `anniversary-data-persistence`: 상세 필드 저장, 관리형 카테고리 잠금, 공유 조회 규칙 반영
+- `anniversary-calendar`: 월간 일정 메타데이터, 100일/주년 마일스톤, 메인/목록 표시 규칙 반영
 
 ## Impact
 
@@ -25,12 +26,13 @@
   - `apps/mobile-web/src/anniversaryClient.ts`
   - `apps/mobile-web/app/(app)/anniversaries.tsx`
   - `apps/mobile-web/app/(app)/index.tsx`
+  - `apps/mobile-web/app/(app)/schedule.tsx`
   - `services/functions/src/handlers.ts`
   - `services/functions/src/anniversaryStore.ts`
-  - `infra/migrations/*` (기념일 스키마 확장 필요 시)
-- API 영향:
-  - `/anniversaries` 요청/응답 페이로드 필드 확장
-  - `/calendar/month-view` 응답 내 기념일 메타데이터 확장 가능
+  - `infra/migrations/0007` ~ `0010`
+- API impact:
+  - `/anniversaries`: 상세 필드와 관리형 카테고리 잠금 에러 코드 반영
+  - `/calendar/month-view`: 기념일 메타데이터와 관계 마일스톤 반영
 - Out of Scope:
-  - 사용자 인증/권한 체계 변경
-  - 외부 캘린더 공급자 신규 연동 추가
+  - 인증/권한 체계 자체 변경
+  - 외부 캘린더 양방향 동기화 확장

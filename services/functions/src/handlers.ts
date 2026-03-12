@@ -358,7 +358,7 @@ export async function handleCalendarMonthView(
       kind: "exam" | "anniversary";
       date: string;
       title: string;
-      category?: "birthday" | "anniversary" | "study" | "other";
+      category?: "birthday" | "relationship" | "anniversary" | "other";
       reminderEnabled?: boolean;
       noteSummary?: string;
       ruleType?: "day_offset" | "monthly" | "yearly";

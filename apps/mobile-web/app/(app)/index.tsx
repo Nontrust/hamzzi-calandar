@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { fetchCalendarMonth, mapErrorToMessage } from "../../src/anniversaryClient";
@@ -13,7 +13,7 @@ type MonthItem = {
   kind: "exam" | "anniversary";
   date: string;
   title: string;
-  category?: "birthday" | "anniversary" | "study" | "other";
+  category?: "birthday" | "relationship" | "anniversary" | "other";
   reminderEnabled?: boolean;
   noteSummary?: string;
   ruleType?: "day_offset" | "monthly" | "yearly";
@@ -24,19 +24,38 @@ type CalendarCell = { type: "blank" } | { type: "day"; day: number; iso: string 
 function formatMonth(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
 function formatDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
 function moveMonth(date: Date, diff: number) {
   return new Date(date.getFullYear(), date.getMonth() + diff, 1);
 }
+
 function monthLabel(month: string) {
   const [year, mm] = month.split("-");
   return `${year}년 ${Number(mm)}월`;
 }
+
 function toKindLabel(item: MonthItem | { kind: "holiday" }) {
   if (item.kind === "holiday") return "공휴일";
-  return item.kind === "anniversary" ? "기념일" : "일정";
+  return item.kind === "anniversary" ? "기념일" : "시험";
+}
+
+function toCategoryLabel(category?: MonthItem["category"]) {
+  switch (category) {
+    case "birthday":
+      return "생일";
+    case "relationship":
+      return "사귄날";
+    case "anniversary":
+      return "기념일";
+    case "other":
+      return "기타";
+    default:
+      return "";
+  }
 }
 
 export default function HomeScreen() {
@@ -134,8 +153,8 @@ export default function HomeScreen() {
           <Image source={BRAND_MARK} style={[styles.homeHeroMark, styles.homeHeroMarkMain]} resizeMode="contain" accessible={false} />
         </View>
         <View style={styles.flex1}>
-          <Text style={styles.homeHeroTitle}>햄찌의 하루</Text>
-          <Text style={styles.homeHeroSub}>오늘 일정과 기념일 상세 정보를 한눈에 확인해요.</Text>
+          <Text style={styles.homeHeroTitle}>햄찌와의 하루</Text>
+          <Text style={styles.homeHeroSub}>오늘 일정과 선택한 날짜의 기념일 정보를 한눈에 확인해요.</Text>
         </View>
       </View>
 
@@ -225,12 +244,7 @@ export default function HomeScreen() {
                 <Text style={[styles.eventMeta, item.kind === "holiday" && styles.eventMetaHoliday]}>
                   {toKindLabel(item as MonthItem | { kind: "holiday" })} · {item.date}
                 </Text>
-                {"category" in item && item.category ? (
-                  <Text style={styles.eventMeta}>
-                    category={item.category} · reminder={item.reminderEnabled ? "on" : "off"} · rule={item.ruleType}
-                  </Text>
-                ) : null}
-                {"noteSummary" in item && item.noteSummary ? <Text style={styles.eventMeta}>note={item.noteSummary}</Text> : null}
+                {"category" in item && item.category ? <Text style={styles.eventMeta}>{toCategoryLabel(item.category)}</Text> : null}
               </View>
             </View>
           ))

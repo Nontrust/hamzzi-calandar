@@ -436,6 +436,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: theme.spacing.sm
   },
+  roleRowWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    flexWrap: "wrap"
+  },
   roleChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
@@ -679,6 +685,12 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.text
   },
+  eventHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8
+  },
   eventMeta: {
     color: theme.colors.textSubtle,
     fontSize: theme.typography.caption
@@ -687,8 +699,66 @@ export const styles = StyleSheet.create({
     color: "#b91c1c",
     fontWeight: "700"
   },
+  lockBadge: {
+    borderRadius: 999,
+    backgroundColor: "#fff4d6",
+    borderWidth: 1,
+    borderColor: "#f2cf7a",
+    paddingHorizontal: 8,
+    paddingVertical: 3
+  },
+  lockBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#8a5a00"
+  },
   actionsWrap: {
     gap: theme.spacing.sm
+  },
+  actionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm
+  },
+  actionItem: {
+    minWidth: 110
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.48)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20
+  },
+  modalBackdropHit: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 520,
+    backgroundColor: "#ffffff",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 10,
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12
+  },
+  modalTextarea: {
+    minHeight: 96
+  },
+  modalErrorText: {
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "700"
   },
   permissionText: {
     color: "#475569",
@@ -710,8 +780,8 @@ export const styles = StyleSheet.create({
     borderColor: "#d4dbe7"
   },
   buttonDanger: {
-    backgroundColor: theme.colors.dangerBg,
-    borderColor: theme.colors.dangerBorder
+    backgroundColor: "#dc2626",
+    borderColor: "#b91c1c"
   },
   buttonDisabled: {
     opacity: 0.5
@@ -727,5 +797,8 @@ export const styles = StyleSheet.create({
   },
   buttonTextSecondary: {
     color: theme.colors.primary
+  },
+  buttonTextDanger: {
+    color: "#ffffff"
   }
 });

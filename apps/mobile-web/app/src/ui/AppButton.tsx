@@ -30,7 +30,11 @@ export function AppButton({
       <Text
         style={[
           styles.buttonText,
-          variant === "secondary" ? styles.buttonTextSecondary : styles.buttonTextPrimary
+          variant === "secondary"
+            ? styles.buttonTextSecondary
+            : variant === "danger"
+              ? styles.buttonTextDanger
+              : styles.buttonTextPrimary
         ]}
       >
         {label}
